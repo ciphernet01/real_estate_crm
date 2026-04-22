@@ -29,7 +29,6 @@ services:
   - type: web
     name: real-estate-crm-frontend
     env: static
-    region: ohio
     rootDir: frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
