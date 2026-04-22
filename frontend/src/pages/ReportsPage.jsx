@@ -1,0 +1,321 @@
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '../services/api.js';
+import { useToastStore } from '../store/toastStore.js';
+
+const emptyActivity = {
+  leadId: '',
+  channel: 'CALL',
+  content: '',
+};
+
+const emptyFollowup = {
+  leadId: '',
+  title: '',
+  dueAt: '',
+};
+
+export default function ReportsPage() {
+  const queryClient = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
+  const [activityForm, setActivityForm] = useState(emptyActivity);
+  const [followupForm, setFollowupForm] = useState(emptyFollowup);
+  const [errorText, setErrorText] = useState('');
+
+  const leadsQuery = useQuery({
+    queryKey: ['report-leads'],
+    queryFn: async () => {
+      const { data } = await api.get('/leads');
+      return data.data;
+    },
+  });
+
+  const timelineQuery = useQuery({
+    queryKey: ['timeline'],
+    queryFn: async () => {
+      const { data } = await api.get('/communications/timeline?limit=100');
+      return data.data;
+    },
+  });
+
+  const pendingQuery = useQuery({
+    queryKey: ['pending-notifications'],
+    queryFn: async () => {
+      const { data } = await api.get('/communications/notifications/pending?windowHours=24');
+      return data.data;
+    },
+    refetchInterval: 30000,
+  });
+
+  const overviewQuery = useQuery({
+    queryKey: ['reports-overview'],
+    queryFn: async () => {
+      const { data } = await api.get('/reports/overview');
+      return data.data;
+    },
+  });
+
+  const logActivityMutation = useMutation({
+    mutationFn: async () => {
+      await api.post('/communications/activity', activityForm);
+    },
+    onSuccess: async () => {
+      setActivityForm(emptyActivity);
+      setErrorText('');
+      addToast({ message: 'Activity logged' });
+      await queryClient.invalidateQueries({ queryKey: ['timeline'] });
+    },
+    onError: (error) => {
+      setErrorText(error?.response?.data?.message || 'Unable to log activity');
+    },
+  });
+
+  const scheduleFollowupMutation = useMutation({
+    mutationFn: async () => {
+      await api.post('/communications/followups/schedule', followupForm);
+    },
+    onSuccess: async () => {
+      setFollowupForm(emptyFollowup);
+      setErrorText('');
+      addToast({ message: 'Follow-up scheduled' });
+      await queryClient.invalidateQueries({ queryKey: ['pending-notifications'] });
+    },
+    onError: (error) => {
+      setErrorText(error?.response?.data?.message || 'Unable to schedule follow-up');
+    },
+  });
+
+  const timeline = timelineQuery.data || [];
+  const pending = pendingQuery.data;
+  const overview = overviewQuery.data;
+
+  const exportReport = async (format) => {
+    const endpoint = format === 'csv' ? '/reports/export/overview.csv' : '/reports/export/overview.pdf';
+    try {
+      const response = await api.get(endpoint, { responseType: 'blob' });
+      const blob = new Blob([response.data], {
+        type: format === 'csv' ? 'text/csv' : 'application/pdf',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = format === 'csv' ? 'crm-report-overview.csv' : 'crm-report-overview.pdf';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setErrorText(error?.response?.data?.message || 'Unable to export report');
+    }
+  };
+
+  return (
+    <section>
+      <header className="page-header">
+        <h2>Reports</h2>
+        <p>Sales KPIs, conversion analytics, revenue tracking, and communication activity.</p>
+      </header>
+
+      <div className="stats-grid" style={{ marginBottom: 18 }}>
+        <div className="stat-card">
+          <span className="stat-label">Lead Conversion</span>
+          <strong className="stat-value">{overview?.leadConversionRate || 0}%</strong>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Closed Deals</span>
+          <strong className="stat-value">{overview?.closedDeals || 0}</strong>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Total Commission</span>
+          <strong className="stat-value">${Number(overview?.totalCommission || 0).toLocaleString()}</strong>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Overdue Follow-ups</span>
+          <strong className="stat-value">{pending?.overdueCount || 0}</strong>
+        </div>
+      </div>
+
+      <div className="panel-grid" style={{ marginBottom: 18 }}>
+        <div className="form-card">
+          <h3>Export Reports</h3>
+          <div className="actions-row">
+            <button type="button" onClick={() => exportReport('csv')}>Export CSV</button>
+            <button type="button" onClick={() => exportReport('pdf')}>Export PDF</button>
+          </div>
+          <div className="muted-line">Exports are generated by backend report endpoints.</div>
+        </div>
+
+        <div className="form-card">
+          <h3>Deal Stage Mix</h3>
+          <div className="form-grid single-col">
+            <div><strong>Negotiation:</strong> {overview?.dealsByStage?.NEGOTIATION || 0}</div>
+            <div><strong>Agreement:</strong> {overview?.dealsByStage?.AGREEMENT || 0}</div>
+            <div><strong>Closed:</strong> {overview?.dealsByStage?.CLOSED || 0}</div>
+            <div><strong>Due in 24h:</strong> {pending?.upcomingCount || 0}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel-grid" style={{ marginBottom: 18 }}>
+        <div className="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(overview?.revenueByMonth || []).map((item) => (
+                <tr key={item.month}>
+                  <td>{item.month}</td>
+                  <td>${Number(item.revenue).toLocaleString()}</td>
+                </tr>
+              ))}
+              {!overviewQuery.isLoading && (overview?.revenueByMonth || []).length === 0 ? (
+                <tr>
+                  <td colSpan={2}>No monthly revenue yet</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Agent</th>
+                <th>Leads</th>
+                <th>Closed</th>
+                <th>Conv%</th>
+                <th>Commission</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(overview?.agentPerformance || []).map((agent) => (
+                <tr key={agent.id}>
+                  <td>{agent.name}</td>
+                  <td>{agent.assignedLeads}</td>
+                  <td>{agent.closedLeads}</td>
+                  <td>{agent.conversionRate}%</td>
+                  <td>${Number(agent.closedCommission).toLocaleString()}</td>
+                </tr>
+              ))}
+              {!overviewQuery.isLoading && (overview?.agentPerformance || []).length === 0 ? (
+                <tr>
+                  <td colSpan={5}>No agent KPI data</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="panel-grid">
+        <form
+          className="form-card"
+          onSubmit={(event) => {
+            event.preventDefault();
+            logActivityMutation.mutate();
+          }}
+        >
+          <h3>Log Activity (Call/SMS/Email)</h3>
+          <div className="form-grid single-col">
+            <label>
+              Lead
+              <select value={activityForm.leadId} onChange={(event) => setActivityForm((current) => ({ ...current, leadId: event.target.value }))}>
+                <option value="">Select lead</option>
+                {(leadsQuery.data || []).map((lead) => (
+                  <option value={lead.id} key={lead.id}>
+                    {lead.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Channel
+              <select value={activityForm.channel} onChange={(event) => setActivityForm((current) => ({ ...current, channel: event.target.value }))}>
+                <option value="CALL">CALL</option>
+                <option value="SMS">SMS</option>
+                <option value="EMAIL">EMAIL</option>
+              </select>
+            </label>
+            <label>
+              Notes
+              <input value={activityForm.content} onChange={(event) => setActivityForm((current) => ({ ...current, content: event.target.value }))} />
+            </label>
+          </div>
+          <button type="submit" disabled={!activityForm.leadId || !activityForm.content.trim() || logActivityMutation.isPending}>
+            {logActivityMutation.isPending ? 'Saving...' : 'Add Activity'}
+          </button>
+        </form>
+
+        <form
+          className="form-card"
+          onSubmit={(event) => {
+            event.preventDefault();
+            scheduleFollowupMutation.mutate();
+          }}
+        >
+          <h3>Schedule Follow-up</h3>
+          <div className="form-grid single-col">
+            <label>
+              Lead
+              <select value={followupForm.leadId} onChange={(event) => setFollowupForm((current) => ({ ...current, leadId: event.target.value }))}>
+                <option value="">Select lead</option>
+                {(leadsQuery.data || []).map((lead) => (
+                  <option value={lead.id} key={lead.id}>
+                    {lead.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Title
+              <input value={followupForm.title} onChange={(event) => setFollowupForm((current) => ({ ...current, title: event.target.value }))} />
+            </label>
+            <label>
+              Due At
+              <input type="datetime-local" value={followupForm.dueAt} onChange={(event) => setFollowupForm((current) => ({ ...current, dueAt: event.target.value }))} />
+            </label>
+          </div>
+          <button type="submit" disabled={!followupForm.leadId || !followupForm.title.trim() || !followupForm.dueAt || scheduleFollowupMutation.isPending}>
+            {scheduleFollowupMutation.isPending ? 'Scheduling...' : 'Schedule'}
+          </button>
+        </form>
+      </div>
+
+      {errorText ? <div className="error-banner" style={{ marginBottom: 16 }}>{errorText}</div> : null}
+
+      <div className="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Lead</th>
+              <th>Type</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {timeline.map((item) => (
+              <tr key={item.id}>
+                <td>{new Date(item.createdAt).toLocaleString()}</td>
+                <td>{item.lead?.name || '-'}</td>
+                <td>{item.type}</td>
+                <td>{item.content}</td>
+              </tr>
+            ))}
+            {!timelineQuery.isLoading && timeline.length === 0 ? (
+              <tr>
+                <td colSpan={4}>No activity logged yet</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+

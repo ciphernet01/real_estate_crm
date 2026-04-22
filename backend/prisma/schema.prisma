@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  AGENT
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CLOSED
+  LOST
+}
+
+enum DealStage {
+  NEGOTIATION
+  AGREEMENT
+  CLOSED
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  RENTED
+}
+
+model User {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  password   String
+  role       Role     @default(AGENT)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  leads      Lead[]   @relation("LeadAssignee")
+  properties Property[] @relation("PropertyAgent")
+  deals      Deal[]   @relation("DealAgent")
+}
+
+model Lead {
+  id            String     @id @default(cuid())
+  name          String
+  phone         String?
+  email         String?
+  source        String
+  budget        Float?
+  preferences   String?
+  status        LeadStatus  @default(NEW)
+  notes         String?
+  assignedToId  String?
+  assignedTo    User?       @relation("LeadAssignee", fields: [assignedToId], references: [id])
+  clientId      String?
+  client        Client?     @relation(fields: [clientId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  interactions  Interaction[]
+  reminders     Reminder[]
+  deal          Deal?
+}
+
+model Property {
+  id          String         @id @default(cuid())
+  title       String
+  type        PropertyType
+  status      PropertyStatus @default(AVAILABLE)
+  address     String
+  city        String
+  state       String?
+  zipCode     String?
+  price       Float
+  sizeSqFt    Float?
+  amenities   String?
+  images      String?
+  latitude    Float?
+  longitude   Float?
+  agentId     String?
+  agent       User?          @relation("PropertyAgent", fields: [agentId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deals       Deal[]
+}
+
+model Client {
+  id           String         @id @default(cuid())
+  name         String
+  email        String?
+  phone        String?
+  type         String?
+  preferences  String?
+  history      String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  leads        Lead[]
+}
+
+model Deal {
+  id          String     @id @default(cuid())
+  title       String
+  stage       DealStage   @default(NEGOTIATION)
+  commission  Float?
+  notes       String?
+  leadId      String?     @unique
+  propertyId  String?
+  agentId     String?
+  lead        Lead?       @relation(fields: [leadId], references: [id])
+  property    Property?   @relation(fields: [propertyId], references: [id])
+  agent       User?       @relation("DealAgent", fields: [agentId], references: [id])
+  documents   Document[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Interaction {
+  id        String   @id @default(cuid())
+  leadId    String
+  type      String
+  content   String
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model Reminder {
+  id          String   @id @default(cuid())
+  leadId      String
+  title       String
+  dueAt       DateTime
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  dealId    String
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: crm_password
+      POSTGRES_DB: real_estate_crm
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm -d real_estate_crm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://crm:crm_password@postgres:5432/real_estate_crm?schema=public
+      JWT_SECRET: replace-with-a-strong-secret
+      JWT_EXPIRES_IN: 7d
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/api/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres_data:
