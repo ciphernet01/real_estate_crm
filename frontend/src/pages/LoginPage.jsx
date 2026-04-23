@@ -17,7 +17,12 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const { data } = await api.post('/auth/login', form);
+      const payload = {
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      };
+
+      const { data } = await api.post('/auth/login', payload);
       login(data);
       navigate('/', { replace: true });
     } catch (err) {

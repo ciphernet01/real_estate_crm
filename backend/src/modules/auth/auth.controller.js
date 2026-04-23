@@ -4,7 +4,14 @@ import { prisma } from '../../config/prisma.js';
 
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const rawEmail = typeof req.body?.email === 'string' ? req.body.email : '';
+    const rawPassword = typeof req.body?.password === 'string' ? req.body.password : '';
+    const email = rawEmail.trim().toLowerCase();
+    const password = rawPassword;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
