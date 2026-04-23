@@ -45,10 +45,12 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    if (/^https:\/\/[a-z0-9-]+\.onrender\.com$/i.test(origin)) {
+    // Allow all .onrender.com subdomains for easier deployment
+    if (/\.onrender\.com$/i.test(origin)) {
       return callback(null, true);
     }
 
+    console.warn(`CORS blocked for origin: ${origin}`);
     return callback(new Error('Not allowed by CORS'));
   },
 };
