@@ -69,3 +69,44 @@ export const listAssignableUsers = async (_req, res, next) => {
     next(error);
   }
 };
+
+export const bootstrapAdmin = async (req, res, next) => {
+  try {
+    const configuredToken = process.env.BOOTSTRAP_TOKEN;
+    const requestToken = req.get('x-bootstrap-token');
+
+    if (!configuredToken) {
+      return res.status(404).json({ message: 'Bootstrap endpoint is disabled' });
+    }
+
+    if (!requestToken || requestToken !== configuredToken) {
+      return res.status(403).json({ message: 'Invalid bootstrap token' });
+    }
+
+    const passwordToSet = process.env.BOOTSTRAP_ADMIN_PASSWORD || 'Admin@123';
+    const passwordHash = await bcrypt.hash(passwordToSet, 10);
+
+    await prisma.user.upsert({
+      where: { email: 'admin@crm.local' },
+      update: {
+        name: 'System Admin',
+        password: passwordHash,
+        role: 'ADMIN',
+      },
+      create: {
+        name: 'System Admin',
+        email: 'admin@crm.local',
+        password: passwordHash,
+        role: 'ADMIN',
+      },
+    });
+
+    return res.json({
+      ok: true,
+      message: 'Admin credentials reset successfully',
+      email: 'admin@crm.local',
+    });
+  } catch (error) {
+    next(error);
+  }
+};

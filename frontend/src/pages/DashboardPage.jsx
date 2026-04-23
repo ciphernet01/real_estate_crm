@@ -182,13 +182,13 @@ export default function DashboardPage() {
             <article className="premium-card" style={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Sales Summary</h3>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>Sales Summary</h3>
                   <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8' }}>MONTHLY EARNINGS</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8' }}>ACTIVE LEADS</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.05em' }}>MONTHLY EARNINGS</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.05em' }}>ACTIVE LEADS</span>
                   </div>
                 </div>
-                <div style={{ color: '#4f46e5', fontWeight: 800, fontSize: '1.1rem' }}>Total: $11,750</div>
+                <div style={{ color: '#818cf8', fontWeight: 800, fontSize: '1.1rem' }}>Total: $11,750</div>
               </div>
               <div style={{ flex: 1 }}>
                 <Line data={mainChartData} options={chartOptions} />
@@ -196,33 +196,33 @@ export default function DashboardPage() {
             </article>
 
             <div style={{ display: 'grid', gap: '20px' }}>
-              <article className="premium-card" style={{ background: '#f8fafc' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>PENDING TOURS</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0' }}>
-                  <strong style={{ fontSize: '1.75rem', fontWeight: 800 }}>$78,920</strong>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center' }}>
+              <article className="premium-card">
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.05em' }}>PENDING TOURS</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0' }}>
+                  <strong style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc' }}>$78,920</strong>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#2dd4bf', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
                     12%
                   </span>
                 </div>
                 {/* Visual Placeholder for trend line */}
-                <div style={{ height: '40px', marginTop: '12px', background: 'linear-gradient(90deg, #eef2ff, transparent)', borderRadius: '4px' }}></div>
+                <div style={{ height: '40px', marginTop: '12px', background: 'linear-gradient(90deg, rgba(99, 102, 241, 0.1), transparent)', borderRadius: '6px', border: '1px solid var(--border-glass)' }}></div>
               </article>
 
               <article className="premium-card">
-                <h4 style={{ margin: '0 0 16px', fontSize: '0.9rem', fontWeight: 700 }}>Monthly Properties</h4>
+                <h4 style={{ margin: '0 0 16px', fontSize: '0.9rem', fontWeight: 800, color: '#f8fafc' }}>Monthly Properties</h4>
                 <div style={{ display: 'grid', gap: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>Closed Deals</span>
-                    <strong style={{ fontSize: '0.9rem' }}>$750,000</strong>
-                    <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700 }}>+ 33%</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Closed Deals</span>
+                    <strong style={{ fontSize: '0.9rem', color: '#f8fafc' }}>$750,000</strong>
+                    <span style={{ color: '#2dd4bf', fontSize: '0.75rem', fontWeight: 800 }}>+ 33%</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>Open Deals</span>
-                    <strong style={{ fontSize: '0.9rem' }}>$420,000</strong>
-                    <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700 }}>+ 25%</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Open Deals</span>
+                    <strong style={{ fontSize: '0.9rem', color: '#f8fafc' }}>$420,000</strong>
+                    <span style={{ color: '#818cf8', fontSize: '0.75rem', fontWeight: 800 }}>+ 25%</span>
                   </div>
-                  <div style={{ width: '100%', height: '4px', background: '#f1f5f9', borderRadius: '2px', marginTop: '8px' }}>
+                  <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-glass)', borderRadius: '2px', marginTop: '8px' }}>
                     <div style={{ width: '75%', height: '100%', background: 'var(--gradient-indigo)', borderRadius: '2px' }}></div>
                   </div>
                 </div>
@@ -232,10 +232,10 @@ export default function DashboardPage() {
 
           {/* Interactive Portfolio Map Hub */}
           <article className="premium-card" style={{ padding: '0', overflow: 'hidden' }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Portfolio Map Hub</h3>
-                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.8rem' }}>Geospatial distribution of active inventory</p>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>Portfolio Map Hub</h3>
+                <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: '0.8rem' }}>Geospatial distribution of active inventory</p>
               </div>
               <button 
                 onClick={() => window.location.href='/properties'}
@@ -305,7 +305,7 @@ export default function DashboardPage() {
         {/* Sidebar Lists */}
         <div style={{ display: 'grid', gap: '20px' }}>
           <article className="premium-card">
-            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800 }}>New Leads</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>New Leads</h3>
             <div style={{ display: 'grid', gap: '16px' }}>
               {[
                 { name: 'Alex Patel', status: 'Property Inquiry' },
@@ -314,11 +314,11 @@ export default function DashboardPage() {
                 { name: 'Priya Gupta', status: 'New Lead' }
               ].map((lead, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#eef2ff', display: 'grid', placeItems: 'center', color: '#4f46e5', fontWeight: 700, fontSize: '0.75rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '12px', background: 'var(--gradient-indigo)', display: 'grid', placeItems: 'center', color: '#ffffff', fontWeight: 800, fontSize: '0.75rem' }}>
                     {lead.name[0]}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <strong style={{ display: 'block', fontSize: '0.85rem' }}>{lead.name}</strong>
+                    <strong style={{ display: 'block', fontSize: '0.85rem', color: '#f8fafc' }}>{lead.name}</strong>
                     <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>{lead.status}</span>
                   </div>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -328,16 +328,16 @@ export default function DashboardPage() {
           </article>
 
           <article className="premium-card">
-            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800 }}>Schedule</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>Schedule</h3>
             <div style={{ display: 'grid', gap: '12px' }}>
               {[
                 { time: '10:00 AM', event: 'Property Emilia Clark', type: 'Viewing' },
                 { time: '02:30 PM', event: 'Call Raunaq Sharma', type: 'Negotiation' }
               ].map((item, i) => (
-                <div key={i} style={{ padding: '10px', borderRadius: '8px', background: '#f8fafc', borderLeft: '3px solid #4f46e5' }}>
-                  <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#4f46e5' }}>{item.time}</span>
-                  <strong style={{ display: 'block', fontSize: '0.8rem', margin: '2px 0' }}>{item.event}</strong>
-                  <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{item.type}</span>
+                <div key={i} style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-glass)', borderLeft: '3px solid #818cf8' }}>
+                  <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: '#818cf8' }}>{item.time}</span>
+                  <strong style={{ display: 'block', fontSize: '0.85rem', margin: '2px 0', color: '#f8fafc' }}>{item.event}</strong>
+                  <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>{item.type}</span>
                 </div>
               ))}
             </div>

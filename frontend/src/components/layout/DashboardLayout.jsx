@@ -87,28 +87,28 @@ export function DashboardLayout() {
           <button 
             onClick={() => setIsPaletteOpen(true)}
             style={{ 
-              background: 'rgba(255, 255, 255, 0.05)', 
+              background: 'rgba(255, 255, 255, 0.04)', 
               border: '1px solid var(--border-glass)', 
-              padding: '6px 12px', 
-              borderRadius: '8px', 
+              padding: '6px 14px', 
+              borderRadius: '10px', 
               display: 'flex', 
               alignItems: 'center', 
               gap: '12px', 
               cursor: 'pointer', 
-              marginRight: '16px',
-              transition: 'all 0.2s'
+              marginRight: '20px',
+              transition: 'all 0.3s ease'
             }}
           >
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>Quick Actions</span>
-            <kbd style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-glass)', color: '#f8fafc', fontWeight: 800 }}>⌘K</kbd>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quick Actions</span>
+            <kbd style={{ fontSize: '0.65rem', background: 'rgba(99, 102, 241, 0.15)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(99, 102, 241, 0.3)', color: '#818cf8', fontWeight: 800 }}>⌘K</kbd>
           </button>
 
-          <div className="notification-bell">
+          <div className="notification-bell" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-glass)', borderRadius: '12px', color: '#94a3b8' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
             </svg>
-            <span className="notification-badge"></span>
+            <span className="notification-badge" style={{ border: '2px solid #020617' }}></span>
           </div>
 
           <div className="user-profile-chip" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-glass)', borderRadius: '12px', padding: '4px 12px' }}>

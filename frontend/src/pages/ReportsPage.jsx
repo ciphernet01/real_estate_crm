@@ -46,8 +46,8 @@ export default function ReportsPage() {
     <div style={{ display: 'grid', gap: '32px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>Business Intelligence</h2>
-          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Comprehensive insights into sales performance and agent efficiency</p>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Business Intelligence</h2>
+          <p style={{ color: '#94a3b8', margin: '4px 0 0' }}>Comprehensive insights into sales performance and agent efficiency</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button onClick={() => exportReport('csv')} className="ghost-btn" style={{ padding: '8px 16px', borderRadius: '10px' }}>Export CSV</button>
@@ -58,18 +58,18 @@ export default function ReportsPage() {
       {/* Analytics KPI Hub */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
         {[
-          { label: 'CONVERSION VELOCITY', val: `${overview?.leadConversionRate || 0}%`, sub: 'Leads to Deals', color: 'indigo', trend: '+2.4%' },
-          { label: 'GROSS REVENUE', val: `$${Number(overview?.totalCommission || 0).toLocaleString()}`, sub: 'Commission Earned', color: 'teal', trend: '+14%' },
-          { label: 'LEAD VELOCITY', val: '4.2d', sub: 'Avg. Response Time', color: 'purple', trend: '-0.5d' },
-          { label: 'TEAM SUCCESS', val: overview?.closedDeals || 0, sub: 'Total Closed Won', color: 'pink', trend: '+5' }
+          { label: 'CONVERSION VELOCITY', val: `${overview?.leadConversionRate || 0}%`, sub: 'Leads to Deals', color: 'indigo', trend: '+2.4%', up: true },
+          { label: 'GROSS REVENUE', val: `$${Number(overview?.totalCommission || 0).toLocaleString()}`, sub: 'Commission Earned', color: 'teal', trend: '+14%', up: true },
+          { label: 'LEAD VELOCITY', val: '4.2d', sub: 'Avg. Response Time', color: 'purple', trend: '-0.5d', up: true },
+          { label: 'TEAM SUCCESS', val: overview?.closedDeals || 0, sub: 'Total Closed Won', color: 'pink', trend: '+5', up: true }
         ].map(s => (
-          <div key={s.label} className="premium-card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div key={s.label} className="premium-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
               <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.05em' }}>{s.label}</span>
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#10b981' }}>{s.trend}</span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: s.up ? '#2dd4bf' : '#f43f5e', background: s.up ? 'rgba(45, 212, 191, 0.1)' : 'rgba(244, 63, 94, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>{s.trend}</span>
             </div>
-            <strong style={{ fontSize: '1.5rem', fontWeight: 800 }}>{s.val}</strong>
-            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{s.sub}</span>
+            <strong style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc', display: 'block' }}>{s.val}</strong>
+            <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, marginTop: '4px', display: 'block' }}>{s.sub}</span>
           </div>
         ))}
       </div>
@@ -93,19 +93,19 @@ export default function ReportsPage() {
                 </thead>
                 <tbody style={{ fontSize: '0.85rem' }}>
                   {overview?.agentPerformance?.map(agent => (
-                    <tr key={agent.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '16px 8px', fontWeight: 600 }}>{agent.name}</td>
-                      <td style={{ padding: '16px 8px' }}>{agent.assignedLeads}</td>
-                      <td style={{ padding: '16px 8px' }}>{agent.closedLeads}</td>
-                      <td style={{ padding: '16px 8px' }}>
+                    <tr key={agent.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                      <td style={{ padding: '16px 8px', fontWeight: 600, color: '#f8fafc' }}>{agent.name}</td>
+                      <td style={{ padding: '16px 8px', color: '#94a3b8' }}>{agent.assignedLeads}</td>
+                      <td style={{ padding: '16px 8px', color: '#94a3b8' }}>{agent.closedLeads}</td>
+                      <td style={{ padding: '16px 8px', color: '#f8fafc' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ width: '40px', height: '4px', background: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ width: '40px', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
                             <div style={{ width: `${agent.conversionRate}%`, height: '100%', background: '#6366f1' }}></div>
                           </div>
                           {agent.conversionRate}%
                         </div>
                       </td>
-                      <td style={{ padding: '16px 8px', textAlign: 'right', fontWeight: 700, color: '#10b981' }}>${Number(agent.closedCommission).toLocaleString()}</td>
+                      <td style={{ padding: '16px 8px', textAlign: 'right', fontWeight: 700, color: '#2dd4bf' }}>${Number(agent.closedCommission).toLocaleString()}</td>
                     </tr>
                   ))}
                   {overviewQuery.isLoading && <tr><td colSpan={5} style={{ textAlign: 'center', padding: '32px' }}><Spinner /></td></tr>}
@@ -133,11 +133,11 @@ export default function ReportsPage() {
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', height: '240px', paddingBottom: '20px' }}>
               {overview?.revenueByMonth?.map((item, idx) => (
-                <div key={item.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-                  <div style={{ width: '100%', height: `${(idx + 5) * 8}%`, background: 'var(--gradient-indigo)', borderRadius: '4px 4px 2px 2px', position: 'relative', boxShadow: '0 0 10px rgba(99, 102, 241, 0.2)' }}>
-                     <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '70%', background: 'rgba(255,255,255,0.05)', borderRadius: '2px 2px 0 0' }}></div>
+                <div key={item.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                  <div style={{ width: '100%', height: `${(idx + 5) * 8}%`, background: 'var(--gradient-indigo)', borderRadius: '6px 6px 2px 2px', position: 'relative', boxShadow: '0 0 20px rgba(99, 102, 241, 0.4)' }}>
+                     <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '60%', background: 'rgba(255,255,255,0.08)', borderRadius: '2px 2px 0 0' }}></div>
                   </div>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{item.month.slice(0, 3)}</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.month.slice(0, 3)}</span>
                 </div>
               ))}
             </div>
@@ -147,14 +147,14 @@ export default function ReportsPage() {
         {/* Timeline Sidebar */}
         <aside style={{ display: 'grid', gap: '24px' }}>
           <article className="premium-card" style={{ padding: '0' }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid #f1f5f9' }}>
-              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Communication Stream</h3>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--border-glass)' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>Communication Stream</h3>
             </div>
             <div style={{ padding: '24px', display: 'grid', gap: '24px' }}>
               {timeline.map((item, idx) => (
                 <div key={item.id} style={{ display: 'flex', gap: '16px', position: 'relative' }}>
-                  {idx !== timeline.length - 1 && <div style={{ position: 'absolute', left: '17px', top: '34px', bottom: '-24px', width: '2px', background: '#f1f5f9' }}></div>}
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: item.type === 'CALL' ? '#eef2ff' : '#f0fdf4', display: 'grid', placeItems: 'center', flexShrink: 0, color: item.type === 'CALL' ? '#6366f1' : '#10b981' }}>
+                  {idx !== timeline.length - 1 && <div style={{ position: 'absolute', left: '17px', top: '34px', bottom: '-24px', width: '2px', background: 'rgba(255,255,255,0.03)' }}></div>}
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: item.type === 'CALL' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(45, 212, 191, 0.1)', border: '1px solid var(--border-glass)', display: 'grid', placeItems: 'center', flexShrink: 0, color: item.type === 'CALL' ? '#818cf8' : '#2dd4bf' }}>
                     {item.type === 'CALL' ? (
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     ) : (
@@ -163,10 +163,10 @@ export default function ReportsPage() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                      <strong style={{ fontSize: '0.85rem', color: '#334155' }}>{item.lead?.name || 'External'}</strong>
+                      <strong style={{ fontSize: '0.85rem', color: '#f8fafc' }}>{item.lead?.name || 'External'}</strong>
                       <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5 }}>{item.content}</p>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>{item.content}</p>
                   </div>
                 </div>
               ))}

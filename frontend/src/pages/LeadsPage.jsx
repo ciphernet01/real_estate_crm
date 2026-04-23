@@ -13,11 +13,11 @@ const nextStatusMap = {
 };
 
 const statusColors = {
-  NEW: { bg: '#eef2ff', text: '#4f46e5' },
-  CONTACTED: { bg: '#fff7ed', text: '#f59e0b' },
-  QUALIFIED: { bg: '#f0fdf4', text: '#10b981' },
-  CLOSED: { bg: '#fdf2f8', text: '#db2777' },
-  LOST: { bg: '#fef2f2', text: '#ef4444' },
+  NEW: { bg: 'rgba(79, 70, 229, 0.15)', text: '#818cf8' },
+  CONTACTED: { bg: 'rgba(245, 158, 11, 0.15)', text: '#fbbf24' },
+  QUALIFIED: { bg: 'rgba(16, 185, 129, 0.15)', text: '#34d399' },
+  CLOSED: { bg: 'rgba(219, 39, 119, 0.15)', text: '#f472b6' },
+  LOST: { bg: 'rgba(244, 63, 94, 0.15)', text: '#fb7185' },
 };
 
 export default function LeadsPage() {
@@ -80,8 +80,8 @@ export default function LeadsPage() {
     <div style={{ display: 'grid', gap: '32px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>Leads Pipeline</h2>
-          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Nurture potential clients and manage your sales funnel</p>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Leads Pipeline</h2>
+          <p style={{ color: '#94a3b8', margin: '4px 0 0' }}>Nurture potential clients and manage your sales funnel</p>
         </div>
         <button 
           onClick={() => setIsComposerOpen(true)}
@@ -102,7 +102,7 @@ export default function LeadsPage() {
         ].map(s => (
           <article key={s.label} className="premium-card" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8' }}>{s.label}</span>
-            <strong style={{ fontSize: '1.5rem', fontWeight: 800 }}>{s.val}</strong>
+            <strong style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>{s.val}</strong>
           </article>
         ))}
       </div>
@@ -148,7 +148,7 @@ export default function LeadsPage() {
                       {lead.name[0]}
                     </div>
                     <div>
-                      <strong style={{ display: 'block', fontSize: '1rem' }}>{lead.name}</strong>
+                      <strong style={{ display: 'block', fontSize: '1rem', color: '#f8fafc' }}>{lead.name}</strong>
                       <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>{lead.source}</span>
                     </div>
                   </div>
@@ -168,7 +168,7 @@ export default function LeadsPage() {
                       borderRadius: '999px',
                       background: statusColors[lead.status]?.bg || 'rgba(255,255,255,0.05)',
                       color: statusColors[lead.status]?.text || '#94a3b8',
-                      border: '1px solid rgba(255,255,255,0.1)'
+                      border: '1px solid var(--border-glass)'
                     }}>
                       {lead.status}
                     </span>
@@ -185,17 +185,17 @@ export default function LeadsPage() {
                 </div>
                 
                 <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '0.8rem' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                     {lead.email || 'No email'}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '0.8rem' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
                     {lead.phone || 'No phone'}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', borderTop: '1px solid #f1f5f9', paddingTop: '16px', gap: '12px' }}>
+                <div style={{ display: 'flex', borderTop: '1px solid var(--border-glass)', paddingTop: '16px', gap: '12px' }}>
                   <select 
                     value={lead.status} 
                     onChange={e => updateStatusMutation.mutate({ id: lead.id, status: e.target.value })}
@@ -205,8 +205,8 @@ export default function LeadsPage() {
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
-                  <button style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                  <button style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'rgba(255,255,255,0.03)', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                   </button>
                 </div>
               </article>
@@ -217,13 +217,13 @@ export default function LeadsPage() {
         {/* Sidebar */}
         <aside style={{ display: 'grid', gap: '20px' }}>
           <article className="premium-card">
-            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800 }}>Recent Reminders</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>Recent Reminders</h3>
             <div style={{ display: 'grid', gap: '12px' }}>
               {remindersQuery.data?.slice(0, 5).map(r => (
                 <div key={r.id} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4f46e5' }}></div>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#818cf8' }}></div>
                   <div>
-                    <strong style={{ display: 'block', fontSize: '0.8rem' }}>{r.title}</strong>
+                    <strong style={{ display: 'block', fontSize: '0.8rem', color: '#f8fafc' }}>{r.title}</strong>
                     <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(r.dueAt).toLocaleDateString()}</span>
                   </div>
                 </div>
@@ -274,10 +274,10 @@ export default function LeadsPage() {
 
       {/* Composer Modal */}
       {isComposerOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(12px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
           <div className="premium-card" style={{ width: 'min(500px, 95%)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>New Pipeline Lead</h3>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>New Pipeline Lead</h3>
               <button 
                 onClick={() => setIsComposerOpen(false)} 
                 style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
@@ -287,28 +287,28 @@ export default function LeadsPage() {
             </div>
             <form onSubmit={e => { e.preventDefault(); createLeadMutation.mutate(form); }} style={{ display: 'grid', gap: '20px' }}>
               <label>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>NAME</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>NAME</span>
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <label>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>SOURCE</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>SOURCE</span>
                   <input value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} required />
                 </label>
                 <label>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>BUDGET ($)</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>BUDGET ($)</span>
                   <input type="number" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} />
                 </label>
               </div>
               <label>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>EMAIL</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>EMAIL</span>
                 <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
               </label>
               <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                 <button type="submit" disabled={createLeadMutation.isPending} className="nav-link-pill active" style={{ flex: 1, border: 'none', cursor: 'pointer' }}>
                   {createLeadMutation.isPending ? 'Adding...' : 'Add Lead'}
                 </button>
-                <button type="button" onClick={() => setIsComposerOpen(false)} style={{ flex: 1, background: '#f1f5f9', border: 'none', borderRadius: '999px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={() => setIsComposerOpen(false)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-glass)', borderRadius: '999px', fontWeight: 700, color: '#94a3b8', cursor: 'pointer' }}>Cancel</button>
               </div>
             </form>
           </div>

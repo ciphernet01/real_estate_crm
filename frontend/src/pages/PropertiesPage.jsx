@@ -122,8 +122,8 @@ export default function PropertiesPage() {
     <div style={{ display: 'grid', gap: '32px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>Properties</h2>
-          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Manage and showcase your real estate inventory</p>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Properties</h2>
+          <p style={{ color: '#94a3b8', margin: '4px 0 0' }}>Manage and showcase your real estate inventory</p>
         </div>
         <button 
           onClick={() => { setIsFormOpen(true); setEditingPropertyId(''); setForm(defaultForm); }}
@@ -138,10 +138,10 @@ export default function PropertiesPage() {
         {/* Filters Sidebar */}
         <aside style={{ display: 'grid', gap: '20px' }}>
           <div className="premium-card">
-            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800 }}>Search & Filter</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>Search & Filter</h3>
             <div style={{ display: 'grid', gap: '16px' }}>
               <label>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>SEARCH</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>SEARCH</span>
                 <input 
                   value={filters.search} 
                   onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
@@ -150,7 +150,7 @@ export default function PropertiesPage() {
                 />
               </label>
               <label>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>TYPE</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>TYPE</span>
                 <select value={filters.type} onChange={(e) => setFilters(f => ({ ...f, type: e.target.value }))}>
                   <option value="">All Types</option>
                   <option value="RESIDENTIAL">Residential</option>
@@ -158,7 +158,7 @@ export default function PropertiesPage() {
                 </select>
               </label>
               <label>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>STATUS</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>STATUS</span>
                 <select value={filters.status} onChange={(e) => setFilters(f => ({ ...f, status: e.target.value }))}>
                   <option value="">All Statuses</option>
                   <option value="AVAILABLE">Available</option>
@@ -168,7 +168,7 @@ export default function PropertiesPage() {
               </label>
               <button 
                 onClick={() => setFilters(defaultFilters)}
-                style={{ background: '#f1f5f9', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 700, color: '#475569', cursor: 'pointer', marginTop: '8px' }}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-glass)', padding: '10px', borderRadius: '8px', fontWeight: 700, color: '#94a3b8', cursor: 'pointer', marginTop: '8px' }}
               >
                 Reset Filters
               </button>
@@ -197,18 +197,18 @@ export default function PropertiesPage() {
               </div>
               <div style={{ padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                  <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{prop.title}</h4>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: prop.status === 'AVAILABLE' ? '#10b981' : '#f59e0b', background: prop.status === 'AVAILABLE' ? '#ecfdf5' : '#fffbeb', padding: '2px 8px', borderRadius: '999px' }}>
+                  <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{prop.title}</h4>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: prop.status === 'AVAILABLE' ? '#10b981' : '#f43f5e', background: prop.status === 'AVAILABLE' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)', padding: '2px 8px', borderRadius: '999px' }}>
                     {prop.status}
                   </span>
                 </div>
-                <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                  {prop.city}, {prop.address}
+                <p style={{ margin: '0 0 16px', color: '#94a3b8', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                   {prop.city}, {prop.address}
                 </p>
-                <div style={{ display: 'flex', borderTop: '1px solid #f1f5f9', paddingTop: '16px', gap: '16px' }}>
-                  <button onClick={() => startEdit(prop)} style={{ flex: 1, background: '#f8fafc', border: '1px solid #e2e8f0', padding: '8px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Edit</button>
-                  <button onClick={() => deletePropertyMutation.mutate(prop.id)} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #fee2e2', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', borderTop: '1px solid var(--border-glass)', paddingTop: '16px', gap: '16px' }}>
+                  <button onClick={() => startEdit(prop)} style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-glass)', padding: '8px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc', cursor: 'pointer' }}>Edit</button>
+                  <button onClick={() => deletePropertyMutation.mutate(prop.id)} style={{ padding: '8px', borderRadius: '8px', border: '1px solid rgba(244, 63, 94, 0.2)', color: '#f43f5e', background: 'rgba(244, 63, 94, 0.05)', cursor: 'pointer' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   </button>
                 </div>
@@ -220,10 +220,10 @@ export default function PropertiesPage() {
 
       {/* Property Form Modal (Simple version for demo) */}
       {isFormOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(12px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
           <div className="premium-card" style={{ width: 'min(600px, 95%)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>{editingPropertyId ? 'Edit Property' : 'Add New Property'}</h3>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>{editingPropertyId ? 'Edit Property' : 'Add New Property'}</h3>
               <button 
                 onClick={() => setIsFormOpen(false)} 
                 style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
@@ -234,32 +234,32 @@ export default function PropertiesPage() {
             <form onSubmit={submitProperty} style={{ display: 'grid', gap: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <label className="full-width">
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>TITLE</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>TITLE</span>
                   <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
                 </label>
                 <label>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>TYPE</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>TYPE</span>
                   <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
                     <option value="RESIDENTIAL">Residential</option>
                     <option value="COMMERCIAL">Commercial</option>
                   </select>
                 </label>
                 <label>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>PRICE</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>PRICE</span>
                   <input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} required />
                 </label>
               </div>
               <label>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>ADDRESS</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>ADDRESS</span>
                 <input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} required />
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <label>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>CITY</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>CITY</span>
                   <input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} required />
                 </label>
                 <label>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>AGENT</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>AGENT</span>
                   <select value={form.agentId} onChange={e => setForm(f => ({ ...f, agentId: e.target.value }))}>
                     <option value="">Select Agent</option>
                     {(agentsQuery.data || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -270,7 +270,7 @@ export default function PropertiesPage() {
                 <button type="submit" disabled={saveMutation.isPending} className="nav-link-pill active" style={{ flex: 1, border: 'none', cursor: 'pointer' }}>
                   {saveMutation.isPending ? 'Saving...' : 'Save Property'}
                 </button>
-                <button type="button" onClick={() => setIsFormOpen(false)} style={{ flex: 1, background: '#f1f5f9', border: 'none', borderRadius: '999px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={() => setIsFormOpen(false)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-glass)', borderRadius: '999px', fontWeight: 700, color: '#94a3b8', cursor: 'pointer' }}>Cancel</button>
               </div>
             </form>
           </div>

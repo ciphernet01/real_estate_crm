@@ -6,9 +6,9 @@ import { Spinner } from '../components/ui/Spinner.jsx';
 
 const stageColumns = ['NEGOTIATION', 'AGREEMENT', 'CLOSED'];
 const stageColors = {
-  NEGOTIATION: { bg: '#eef2ff', text: '#4f46e5', dot: '#4f46e5' },
-  AGREEMENT: { bg: '#fff7ed', text: '#f59e0b', dot: '#f59e0b' },
-  CLOSED: { bg: '#f0fdf4', text: '#10b981', dot: '#10b981' },
+  NEGOTIATION: { bg: 'rgba(79, 70, 229, 0.15)', text: '#818cf8', dot: '#818cf8' },
+  AGREEMENT: { bg: 'rgba(245, 158, 11, 0.15)', text: '#fbbf24', dot: '#fbbf24' },
+  CLOSED: { bg: 'rgba(16, 185, 129, 0.15)', text: '#34d399', dot: '#34d399' },
 };
 
 export default function DealsPage() {
@@ -62,8 +62,8 @@ export default function DealsPage() {
     <div style={{ display: 'grid', gap: '32px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>Sales Pipeline</h2>
-          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Track transaction progress and commission breakthroughs</p>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>Sales Pipeline</h2>
+          <p style={{ color: '#94a3b8', margin: '4px 0 0' }}>Track transaction progress and commission breakthroughs</p>
         </div>
         <button 
           onClick={() => setIsFormOpen(true)}
@@ -84,7 +84,7 @@ export default function DealsPage() {
         ].map(s => (
           <div key={s.label} className="premium-card" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>{s.label}</span>
-            <strong style={{ fontSize: '1.25rem', fontWeight: 800 }}>{s.val}</strong>
+            <strong style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>{s.val}</strong>
           </div>
         ))}
       </div>
@@ -96,18 +96,18 @@ export default function DealsPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: stageColors[stage].dot }}></div>
-                <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#334155', margin: 0 }}>{stage}</h3>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>{stage}</h3>
               </div>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
                 {dealsByStage[stage].length}
               </span>
             </div>
 
             <div style={{ display: 'grid', gap: '16px', minHeight: '500px' }}>
               {dealsByStage[stage].map(deal => (
-                <article key={deal.id} className="premium-card" style={{ border: '1px solid transparent', transition: 'all 0.2s' }}>
+                <article key={deal.id} className="premium-card" style={{ border: '1px solid var(--border-glass)', transition: 'all 0.2s' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <strong style={{ fontSize: '0.9rem', color: '#1e293b' }}>{deal.title}</strong>
+                    <strong style={{ fontSize: '0.9rem', color: '#f8fafc' }}>{deal.title}</strong>
                     <div style={{ position: 'relative' }}>
                       <select 
                         value={deal.stage}
@@ -121,11 +121,11 @@ export default function DealsPage() {
                   </div>
 
                   <div style={{ display: 'grid', gap: '8px', marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#64748b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#94a3b8' }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       {deal.lead?.name || 'Walk-in Client'}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#64748b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#94a3b8' }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                       {deal.property?.title || 'Open Listing'}
                     </div>
@@ -162,7 +162,7 @@ export default function DealsPage() {
                 </article>
               ))}
               {dealsByStage[stage].length === 0 && (
-                <div style={{ border: '2px dashed #f1f5f9', borderRadius: '16px', height: '100px', display: 'grid', placeItems: 'center', color: '#cbd5e1', fontSize: '0.8rem' }}>
+                <div style={{ border: '2px dashed var(--border-glass)', borderRadius: '16px', height: '100px', display: 'grid', placeItems: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
                   No deals
                 </div>
               )}
@@ -173,29 +173,29 @@ export default function DealsPage() {
 
       {/* Engagement Modal */}
       {isFormOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(12px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
           <div className="premium-card" style={{ width: 'min(500px, 95%)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Initiate Engagement</h3>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>Initiate Engagement</h3>
               <button onClick={() => setIsFormOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
             <form onSubmit={e => { e.preventDefault(); createDealMutation.mutate(form); }} style={{ display: 'grid', gap: '20px' }}>
               <label>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>DEAL TITLE</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>DEAL TITLE</span>
                 <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <label>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>INITIAL STAGE</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>INITIAL STAGE</span>
                   <select value={form.stage} onChange={e => setForm(f => ({ ...f, stage: e.target.value }))}>
                     <option value="NEGOTIATION">Negotiation</option>
                     <option value="AGREEMENT">Agreement</option>
                   </select>
                 </label>
                 <label>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>COMMISSION (%)</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>COMMISSION (%)</span>
                   <input type="number" value={form.commissionRate} onChange={e => setForm(f => ({ ...f, commissionRate: e.target.value }))} />
                 </label>
               </div>
@@ -203,7 +203,7 @@ export default function DealsPage() {
                 <button type="submit" disabled={createDealMutation.isPending} className="nav-link-pill active" style={{ flex: 1, border: 'none', cursor: 'pointer' }}>
                   {createDealMutation.isPending ? 'Processing...' : 'Launch Deal'}
                 </button>
-                <button type="button" onClick={() => setIsFormOpen(false)} style={{ flex: 1, background: '#f1f5f9', border: 'none', borderRadius: '999px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={() => setIsFormOpen(false)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-glass)', borderRadius: '999px', fontWeight: 700, color: '#94a3b8', cursor: 'pointer' }}>Cancel</button>
               </div>
             </form>
           </div>

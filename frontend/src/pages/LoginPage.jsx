@@ -40,11 +40,11 @@ export default function LoginPage() {
     <div className="login-screen">
       <form className="login-card" onSubmit={submit}>
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
-          <h1 style={{ fontSize: '2rem', marginBottom: '8px' }}>💼 Real Estate CRM</h1>
+          <h1 style={{ fontSize: '2rem', marginBottom: '8px', color: '#f8fafc' }}>💼 Real Estate CRM</h1>
           <p style={{ color: '#94a3b8', margin: 0 }}>Enterprise Sales & Operations Platform</p>
         </div>
 
-        <div style={{ margin: '24px 0 16px 0 ', padding: '12px', backgroundColor: 'rgba(96, 165, 250, 0.08)', borderRadius: '8px', fontSize: '0.85rem ', color: '#bfdbfe' }}>
+        <div style={{ margin: '24px 0 16px 0 ', padding: '12px', backgroundColor: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.2)', borderRadius: '8px', fontSize: '0.85rem ', color: '#818cf8', textAlign: 'center' }}>
           💡 Demo: admin@crm.local / Admin@123
         </div>
 
@@ -85,9 +85,9 @@ export default function LoginPage() {
           {loading ? 'Signing in...' : 'Sign In'}
         </Button>
 
-        <div style={{ marginTop: '16px', fontSize: '0.8rem', color: '#64748b', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
-          <p style={{ margin: 0 }}>Enterprise CRM v1.0.0</p>
-          <p style={{ margin: '4px 0 0 0' }}>© 2025 All Rights Reserved</p>
+        <div style={{ marginTop: '16px', fontSize: '0.8rem', color: '#64748b', textAlign: 'center', borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>
+          <p style={{ margin: 0, color: '#94a3b8' }}>Enterprise CRM v1.0.0</p>
+          <p style={{ margin: '4px 0 0 0', color: '#64748b' }}>© 2025 All Rights Reserved</p>
         </div>
       </form>
     </div>
