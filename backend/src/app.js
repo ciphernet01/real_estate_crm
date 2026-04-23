@@ -24,17 +24,37 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+app.set('trust proxy', 1);
+
 /* ---------- Security & parsing ---------- */
 app.use(helmet());
 
-const corsOrigin = process.env.CORS_ORIGIN;
-app.use(
-  cors(
-    corsOrigin
-      ? { origin: corsOrigin.split(',').map((o) => o.trim()), credentials: true }
-      : undefined,
-  ),
-);
+const configuredOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  credentials: true,
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (configuredOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    if (/^https:\/\/[a-z0-9-]+\.onrender\.com$/i.test(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  },
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));

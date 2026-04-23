@@ -1,8 +1,32 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore.js';
 
+function resolveApiBaseUrl() {
+  const explicitApiUrl = import.meta.env.VITE_API_URL;
+  if (explicitApiUrl) {
+    return explicitApiUrl;
+  }
+
+  if (typeof window === 'undefined') {
+    return 'http://localhost:4000/api';
+  }
+
+  const { protocol, hostname } = window.location;
+  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+
+  if (isLocalHost) {
+    return 'http://localhost:4000/api';
+  }
+
+  if (hostname.endsWith('.onrender.com') && hostname.includes('-frontend')) {
+    return `${protocol}//${hostname.replace('-frontend', '-backend')}/api`;
+  }
+
+  return `${protocol}//${hostname}/api`;
+}
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
+  baseURL: resolveApiBaseUrl(),
 });
 
 api.interceptors.request.use((config) => {

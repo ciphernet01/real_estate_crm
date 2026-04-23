@@ -26,7 +26,11 @@ export default function LoginPage() {
       login(data);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err?.response?.data?.message || 'Login failed');
+      if (!err?.response) {
+        setError(`Unable to reach auth server. Check API URL/CORS (current API: ${api.defaults.baseURL})`);
+      } else {
+        setError(err?.response?.data?.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
