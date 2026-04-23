@@ -26,6 +26,7 @@ services:
       DATABASE_URL: postgresql://crm:crm_password@postgres:5432/real_estate_crm?schema=public
       JWT_SECRET: replace-with-a-strong-secret
       JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:5173
     depends_on:
       postgres:
         condition: service_healthy
