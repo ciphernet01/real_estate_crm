@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api.js';
 import { useToastStore } from '../store/toastStore.js';
+import { Spinner } from '../components/ui/Spinner.jsx';
 
 const defaultForm = {
   title: '',
@@ -28,31 +29,22 @@ const defaultFilters = {
   maxPrice: '',
 };
 
-const parseImages = (images) => {
-  if (!images) return [];
-  return String(images)
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-};
-
-const buildMapUrl = (property) => {
-  if (property.latitude && property.longitude) {
-    return `https://www.google.com/maps?q=${property.latitude},${property.longitude}`;
-  }
-
-  return `https://www.google.com/maps?q=${encodeURIComponent(`${property.address}, ${property.city}`)}`;
-};
+const PROPERTY_IMAGES = [
+  'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80',
+];
 
 export default function PropertiesPage() {
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
   const [form, setForm] = useState(defaultForm);
   const [filters, setFilters] = useState(defaultFilters);
-  const [imageFiles, setImageFiles] = useState([]);
-  const [uploadedImages, setUploadedImages] = useState([]);
   const [editingPropertyId, setEditingPropertyId] = useState('');
-  const [errorText, setErrorText] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const propertiesQuery = useQuery({
     queryKey: ['properties', filters],
@@ -71,52 +63,20 @@ export default function PropertiesPage() {
     },
   });
 
-  const uploadImageMutation = useMutation({
-    mutationFn: async (file) => {
-      const payload = new FormData();
-      payload.append('image', file);
-      const { data } = await api.post('/properties/upload', payload, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return data.data.url;
-    },
-  });
-
-  const createPropertyMutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: async (payload) => {
-      await api.post('/properties', payload);
+      if (editingPropertyId) {
+        await api.patch(`/properties/${editingPropertyId}`, payload);
+      } else {
+        await api.post('/properties', payload);
+      }
     },
     onSuccess: async () => {
       setForm(defaultForm);
-      setImageFiles([]);
-      setUploadedImages([]);
       setEditingPropertyId('');
-      setErrorText('');
-      addToast({ message: 'Property created successfully' });
+      setIsFormOpen(false);
+      addToast({ message: `Property ${editingPropertyId ? 'updated' : 'created'} successfully` });
       await queryClient.invalidateQueries({ queryKey: ['properties'] });
-    },
-    onError: (error) => {
-      setErrorText(error?.response?.data?.message || 'Unable to save property');
-    },
-  });
-
-  const updatePropertyMutation = useMutation({
-    mutationFn: async ({ id, payload }) => {
-      await api.patch(`/properties/${id}`, payload);
-    },
-    onSuccess: async () => {
-      setForm(defaultForm);
-      setImageFiles([]);
-      setUploadedImages([]);
-      setEditingPropertyId('');
-      setErrorText('');
-      addToast({ message: 'Property updated' });
-      await queryClient.invalidateQueries({ queryKey: ['properties'] });
-    },
-    onError: (error) => {
-      setErrorText(error?.response?.data?.message || 'Unable to update property');
     },
   });
 
@@ -125,57 +85,21 @@ export default function PropertiesPage() {
       await api.delete(`/properties/${id}`);
     },
     onSuccess: async () => {
-      addToast({ message: 'Property deleted' });
+      addToast({ message: 'Property removed' });
       await queryClient.invalidateQueries({ queryKey: ['properties'] });
     },
   });
 
-  const statusUpdateMutation = useMutation({
-    mutationFn: async ({ id, status }) => {
-      await api.patch(`/properties/${id}`, { status });
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['properties'] });
-    },
-  });
-
-  const isSaving = createPropertyMutation.isPending || updatePropertyMutation.isPending;
-
-  const submitProperty = async (event) => {
+  const submitProperty = (event) => {
     event.preventDefault();
-
-    try {
-      let uploadedUrls = [...uploadedImages];
-      if (imageFiles.length > 0) {
-        const newUrls = [];
-        for (const file of imageFiles) {
-          const url = await uploadImageMutation.mutateAsync(file);
-          newUrls.push(url);
-        }
-        uploadedUrls = [...uploadedUrls, ...newUrls];
-      }
-
-      const payload = {
-        ...form,
-        price: Number(form.price),
-        sizeSqFt: form.sizeSqFt ? Number(form.sizeSqFt) : undefined,
-        latitude: form.latitude ? Number(form.latitude) : undefined,
-        longitude: form.longitude ? Number(form.longitude) : undefined,
-        state: form.state || undefined,
-        zipCode: form.zipCode || undefined,
-        amenities: form.amenities || undefined,
-        images: uploadedUrls,
-        agentId: form.agentId || undefined,
-      };
-
-      if (editingPropertyId) {
-        await updatePropertyMutation.mutateAsync({ id: editingPropertyId, payload });
-      } else {
-        await createPropertyMutation.mutateAsync(payload);
-      }
-    } catch (error) {
-      setErrorText(error?.response?.data?.message || error.message || 'Unable to save property');
-    }
+    const payload = {
+      ...form,
+      price: Number(form.price),
+      sizeSqFt: form.sizeSqFt ? Number(form.sizeSqFt) : undefined,
+      latitude: form.latitude ? Number(form.latitude) : undefined,
+      longitude: form.longitude ? Number(form.longitude) : undefined,
+    };
+    saveMutation.mutate(payload);
   };
 
   const startEdit = (property) => {
@@ -186,253 +110,172 @@ export default function PropertiesPage() {
       status: property.status || 'AVAILABLE',
       address: property.address || '',
       city: property.city || '',
-      state: property.state || '',
-      zipCode: property.zipCode || '',
       price: property.price ?? '',
       sizeSqFt: property.sizeSqFt ?? '',
       amenities: property.amenities || '',
-      latitude: property.latitude ?? '',
-      longitude: property.longitude ?? '',
       agentId: property.agentId || '',
     });
-    setUploadedImages(parseImages(property.images));
-    setImageFiles([]);
+    setIsFormOpen(true);
   };
-
-  const clearForm = () => {
-    setEditingPropertyId('');
-    setForm(defaultForm);
-    setImageFiles([]);
-    setUploadedImages([]);
-  };
-
-  const canSubmit = useMemo(() => {
-    return form.title.trim().length > 2 && form.address.trim().length > 2 && form.city.trim().length > 1 && String(form.price).length > 0;
-  }, [form]);
 
   return (
-    <section>
-      <header className="page-header">
-        <h2>Properties</h2>
-        <p>Create listings, upload images, search inventory, and open map locations.</p>
+    <div style={{ display: 'grid', gap: '32px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>Properties</h2>
+          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Manage and showcase your real estate inventory</p>
+        </div>
+        <button 
+          onClick={() => { setIsFormOpen(true); setEditingPropertyId(''); setForm(defaultForm); }}
+          className="nav-link-pill active"
+          style={{ border: 'none', cursor: 'pointer' }}
+        >
+          Add New Property
+        </button>
       </header>
 
-      <div className="panel-grid">
-        <form className="form-card" onSubmit={submitProperty}>
-          <h3>{editingPropertyId ? 'Edit Property' : 'Add Property'}</h3>
-          <div className="form-grid">
-            <label>
-              Title
-              <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} required />
-            </label>
-            <label>
-              Type
-              <select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}>
-                <option value="RESIDENTIAL">Residential</option>
-                <option value="COMMERCIAL">Commercial</option>
-              </select>
-            </label>
-            <label>
-              Status
-              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
-                <option value="AVAILABLE">Available</option>
-                <option value="RESERVED">Reserved</option>
-                <option value="SOLD">Sold</option>
-                <option value="RENTED">Rented</option>
-              </select>
-            </label>
-            <label>
-              Price
-              <input type="number" min="0" value={form.price} onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))} required />
-            </label>
-            <label className="full-width">
-              Address
-              <input value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} required />
-            </label>
-            <label>
-              City
-              <input value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))} required />
-            </label>
-            <label>
-              State
-              <input value={form.state} onChange={(event) => setForm((current) => ({ ...current, state: event.target.value }))} />
-            </label>
-            <label>
-              ZIP
-              <input value={form.zipCode} onChange={(event) => setForm((current) => ({ ...current, zipCode: event.target.value }))} />
-            </label>
-            <label>
-              Size (sqft)
-              <input type="number" min="0" value={form.sizeSqFt} onChange={(event) => setForm((current) => ({ ...current, sizeSqFt: event.target.value }))} />
-            </label>
-            <label>
-              Latitude
-              <input type="number" step="any" value={form.latitude} onChange={(event) => setForm((current) => ({ ...current, latitude: event.target.value }))} />
-            </label>
-            <label>
-              Longitude
-              <input type="number" step="any" value={form.longitude} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value }))} />
-            </label>
-            <label>
-              Agent
-              <select value={form.agentId} onChange={(event) => setForm((current) => ({ ...current, agentId: event.target.value }))}>
-                <option value="">Auto/default</option>
-                {(agentsQuery.data || []).map((agent) => (
-                  <option value={agent.id} key={agent.id}>
-                    {agent.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="full-width">
-              Amenities
-              <input value={form.amenities} onChange={(event) => setForm((current) => ({ ...current, amenities: event.target.value }))} />
-            </label>
-            <label className="full-width">
-              Images
-              <input type="file" multiple accept="image/*" onChange={(event) => setImageFiles(Array.from(event.target.files || []))} />
-            </label>
-          </div>
-
-          {uploadedImages.length > 0 ? (
-            <div className="image-chip-row">
-              {uploadedImages.map((url) => (
-                <span className="image-chip" key={url}>
-                  Uploaded image
-                </span>
-              ))}
-            </div>
-          ) : null}
-
-          <div className="actions-row">
-            <button type="submit" disabled={!canSubmit || isSaving || uploadImageMutation.isPending}>
-              {isSaving || uploadImageMutation.isPending ? 'Saving...' : editingPropertyId ? 'Update Property' : 'Create Property'}
-            </button>
-            {editingPropertyId ? (
-              <button type="button" onClick={clearForm} className="ghost-btn">
-                Cancel Edit
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '32px', alignItems: 'start' }}>
+        {/* Filters Sidebar */}
+        <aside style={{ display: 'grid', gap: '20px' }}>
+          <div className="premium-card">
+            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800 }}>Search & Filter</h3>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <label>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>SEARCH</span>
+                <input 
+                  value={filters.search} 
+                  onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
+                  placeholder="Key terms..."
+                  style={{ fontSize: '0.85rem' }}
+                />
+              </label>
+              <label>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>TYPE</span>
+                <select value={filters.type} onChange={(e) => setFilters(f => ({ ...f, type: e.target.value }))}>
+                  <option value="">All Types</option>
+                  <option value="RESIDENTIAL">Residential</option>
+                  <option value="COMMERCIAL">Commercial</option>
+                </select>
+              </label>
+              <label>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>STATUS</span>
+                <select value={filters.status} onChange={(e) => setFilters(f => ({ ...f, status: e.target.value }))}>
+                  <option value="">All Statuses</option>
+                  <option value="AVAILABLE">Available</option>
+                  <option value="RESERVED">Reserved</option>
+                  <option value="SOLD">Sold</option>
+                </select>
+              </label>
+              <button 
+                onClick={() => setFilters(defaultFilters)}
+                style={{ background: '#f1f5f9', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 700, color: '#475569', cursor: 'pointer', marginTop: '8px' }}
+              >
+                Reset Filters
               </button>
-            ) : null}
+            </div>
           </div>
-        </form>
+        </aside>
 
-        <div className="form-card">
-          <h3>Filter & Search</h3>
-          <div className="form-grid">
-            <label className="full-width">
-              Search
-              <input value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Title, address, city, amenities" />
-            </label>
-            <label>
-              City
-              <input value={filters.city} onChange={(event) => setFilters((current) => ({ ...current, city: event.target.value }))} />
-            </label>
-            <label>
-              Type
-              <select value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}>
-                <option value="">All</option>
-                <option value="RESIDENTIAL">Residential</option>
-                <option value="COMMERCIAL">Commercial</option>
-              </select>
-            </label>
-            <label>
-              Status
-              <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
-                <option value="">All</option>
-                <option value="AVAILABLE">Available</option>
-                <option value="RESERVED">Reserved</option>
-                <option value="SOLD">Sold</option>
-                <option value="RENTED">Rented</option>
-              </select>
-            </label>
-            <label>
-              Min Price
-              <input type="number" min="0" value={filters.minPrice} onChange={(event) => setFilters((current) => ({ ...current, minPrice: event.target.value }))} />
-            </label>
-            <label>
-              Max Price
-              <input type="number" min="0" value={filters.maxPrice} onChange={(event) => setFilters((current) => ({ ...current, maxPrice: event.target.value }))} />
-            </label>
-          </div>
-
-          <button type="button" onClick={() => setFilters(defaultFilters)}>
-            Reset Filters
-          </button>
+        {/* Properties Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+          {propertiesQuery.isLoading ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}><Spinner size={32} /></div>
+          ) : (propertiesQuery.data || []).map((prop, idx) => (
+            <article key={prop.id} className="premium-card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ position: 'relative', height: '200px' }}>
+                <img 
+                  src={PROPERTY_IMAGES[idx % PROPERTY_IMAGES.length]} 
+                  alt={prop.title} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'var(--gradient-indigo)', color: 'white', padding: '4px 12px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 800 }}>
+                  {prop.type}
+                </div>
+                <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(255,255,255,0.95)', color: '#0f172a', padding: '4px 12px', borderRadius: '8px', fontSize: '1rem', fontWeight: 800 }}>
+                  ${Number(prop.price).toLocaleString()}
+                </div>
+              </div>
+              <div style={{ padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                  <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{prop.title}</h4>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: prop.status === 'AVAILABLE' ? '#10b981' : '#f59e0b', background: prop.status === 'AVAILABLE' ? '#ecfdf5' : '#fffbeb', padding: '2px 8px', borderRadius: '999px' }}>
+                    {prop.status}
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  {prop.city}, {prop.address}
+                </p>
+                <div style={{ display: 'flex', borderTop: '1px solid #f1f5f9', paddingTop: '16px', gap: '16px' }}>
+                  <button onClick={() => startEdit(prop)} style={{ flex: 1, background: '#f8fafc', border: '1px solid #e2e8f0', padding: '8px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Edit</button>
+                  <button onClick={() => deletePropertyMutation.mutate(prop.id)} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #fee2e2', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
       </div>
 
-      {errorText ? <div className="error-banner" style={{ marginBottom: 16 }}>{errorText}</div> : null}
-
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Listing</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Location</th>
-              <th>Price</th>
-              <th>Images</th>
-              <th>Map</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(propertiesQuery.data || []).map((property) => {
-              const images = parseImages(property.images);
-
-              return (
-                <tr key={property.id}>
-                  <td>
-                    <strong>{property.title}</strong>
-                    <div className="muted-line">{property.agent?.name || 'No agent'}</div>
-                  </td>
-                  <td>{property.type}</td>
-                  <td>
-                    <select
-                      value={property.status}
-                      onChange={(event) => statusUpdateMutation.mutate({ id: property.id, status: event.target.value })}
-                    >
-                      <option value="AVAILABLE">AVAILABLE</option>
-                      <option value="RESERVED">RESERVED</option>
-                      <option value="SOLD">SOLD</option>
-                      <option value="RENTED">RENTED</option>
-                    </select>
-                  </td>
-                  <td>{property.city}</td>
-                  <td>${Number(property.price).toLocaleString()}</td>
-                  <td>{images.length}</td>
-                  <td>
-                    <a href={buildMapUrl(property)} target="_blank" rel="noreferrer" className="table-link">
-                      Open map
-                    </a>
-                  </td>
-                  <td>
-                    <div className="actions-row compact">
-                      <button type="button" onClick={() => startEdit(property)} className="ghost-btn">
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deletePropertyMutation.mutate(property.id)}
-                        className="danger-btn"
-                        disabled={deletePropertyMutation.isPending}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {!propertiesQuery.isLoading && (propertiesQuery.data || []).length === 0 ? (
-              <tr>
-                <td colSpan={8}>No properties found for current filters</td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-    </section>
+      {/* Property Form Modal (Simple version for demo) */}
+      {isFormOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
+          <div className="premium-card" style={{ width: 'min(600px, 95%)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>{editingPropertyId ? 'Edit Property' : 'Add New Property'}</h3>
+              <button 
+                onClick={() => setIsFormOpen(false)} 
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <form onSubmit={submitProperty} style={{ display: 'grid', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <label className="full-width">
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>TITLE</span>
+                  <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
+                </label>
+                <label>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>TYPE</span>
+                  <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+                    <option value="RESIDENTIAL">Residential</option>
+                    <option value="COMMERCIAL">Commercial</option>
+                  </select>
+                </label>
+                <label>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>PRICE</span>
+                  <input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} required />
+                </label>
+              </div>
+              <label>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>ADDRESS</span>
+                <input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} required />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <label>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>CITY</span>
+                  <input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} required />
+                </label>
+                <label>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>AGENT</span>
+                  <select value={form.agentId} onChange={e => setForm(f => ({ ...f, agentId: e.target.value }))}>
+                    <option value="">Select Agent</option>
+                    {(agentsQuery.data || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                <button type="submit" disabled={saveMutation.isPending} className="nav-link-pill active" style={{ flex: 1, border: 'none', cursor: 'pointer' }}>
+                  {saveMutation.isPending ? 'Saving...' : 'Save Property'}
+                </button>
+                <button type="button" onClick={() => setIsFormOpen(false)} style={{ flex: 1, background: '#f1f5f9', border: 'none', borderRadius: '999px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

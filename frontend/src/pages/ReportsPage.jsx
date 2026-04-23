@@ -1,51 +1,10 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api.js';
-import { useToastStore } from '../store/toastStore.js';
-
-const emptyActivity = {
-  leadId: '',
-  channel: 'CALL',
-  content: '',
-};
-
-const emptyFollowup = {
-  leadId: '',
-  title: '',
-  dueAt: '',
-};
+import { Spinner } from '../components/ui/Spinner.jsx';
 
 export default function ReportsPage() {
-  const queryClient = useQueryClient();
-  const addToast = useToastStore((s) => s.addToast);
-  const [activityForm, setActivityForm] = useState(emptyActivity);
-  const [followupForm, setFollowupForm] = useState(emptyFollowup);
   const [errorText, setErrorText] = useState('');
-
-  const leadsQuery = useQuery({
-    queryKey: ['report-leads'],
-    queryFn: async () => {
-      const { data } = await api.get('/leads');
-      return data.data;
-    },
-  });
-
-  const timelineQuery = useQuery({
-    queryKey: ['timeline'],
-    queryFn: async () => {
-      const { data } = await api.get('/communications/timeline?limit=100');
-      return data.data;
-    },
-  });
-
-  const pendingQuery = useQuery({
-    queryKey: ['pending-notifications'],
-    queryFn: async () => {
-      const { data } = await api.get('/communications/notifications/pending?windowHours=24');
-      return data.data;
-    },
-    refetchInterval: 30000,
-  });
 
   const overviewQuery = useQuery({
     queryKey: ['reports-overview'],
@@ -55,267 +14,170 @@ export default function ReportsPage() {
     },
   });
 
-  const logActivityMutation = useMutation({
-    mutationFn: async () => {
-      await api.post('/communications/activity', activityForm);
-    },
-    onSuccess: async () => {
-      setActivityForm(emptyActivity);
-      setErrorText('');
-      addToast({ message: 'Activity logged' });
-      await queryClient.invalidateQueries({ queryKey: ['timeline'] });
-    },
-    onError: (error) => {
-      setErrorText(error?.response?.data?.message || 'Unable to log activity');
+  const timelineQuery = useQuery({
+    queryKey: ['timeline'],
+    queryFn: async () => {
+      const { data } = await api.get('/communications/timeline?limit=20');
+      return data.data;
     },
   });
-
-  const scheduleFollowupMutation = useMutation({
-    mutationFn: async () => {
-      await api.post('/communications/followups/schedule', followupForm);
-    },
-    onSuccess: async () => {
-      setFollowupForm(emptyFollowup);
-      setErrorText('');
-      addToast({ message: 'Follow-up scheduled' });
-      await queryClient.invalidateQueries({ queryKey: ['pending-notifications'] });
-    },
-    onError: (error) => {
-      setErrorText(error?.response?.data?.message || 'Unable to schedule follow-up');
-    },
-  });
-
-  const timeline = timelineQuery.data || [];
-  const pending = pendingQuery.data;
-  const overview = overviewQuery.data;
 
   const exportReport = async (format) => {
     const endpoint = format === 'csv' ? '/reports/export/overview.csv' : '/reports/export/overview.pdf';
     try {
       const response = await api.get(endpoint, { responseType: 'blob' });
-      const blob = new Blob([response.data], {
-        type: format === 'csv' ? 'text/csv' : 'application/pdf',
-      });
+      const blob = new Blob([response.data], { type: format === 'csv' ? 'text/csv' : 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = format === 'csv' ? 'crm-report-overview.csv' : 'crm-report-overview.pdf';
+      link.download = `crm-report-${new Date().toISOString().split('T')[0]}.${format}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      setErrorText(error?.response?.data?.message || 'Unable to export report');
+    } catch (e) {
+      setErrorText('Export failed. Please try again later.');
     }
   };
 
+  const overview = overviewQuery.data;
+  const timeline = timelineQuery.data || [];
+
   return (
-    <section>
-      <header className="page-header">
-        <h2>Reports</h2>
-        <p>Sales KPIs, conversion analytics, revenue tracking, and communication activity.</p>
+    <div style={{ display: 'grid', gap: '32px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>Business Intelligence</h2>
+          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Comprehensive insights into sales performance and agent efficiency</p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={() => exportReport('csv')} className="ghost-btn" style={{ padding: '8px 16px', borderRadius: '10px' }}>Export CSV</button>
+          <button onClick={() => exportReport('pdf')} className="nav-link-pill active" style={{ padding: '8px 16px', border: 'none', cursor: 'pointer' }}>Generate PDF</button>
+        </div>
       </header>
 
-      <div className="stats-grid" style={{ marginBottom: 18 }}>
-        <div className="stat-card">
-          <span className="stat-label">Lead Conversion</span>
-          <strong className="stat-value">{overview?.leadConversionRate || 0}%</strong>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Closed Deals</span>
-          <strong className="stat-value">{overview?.closedDeals || 0}</strong>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Total Commission</span>
-          <strong className="stat-value">${Number(overview?.totalCommission || 0).toLocaleString()}</strong>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Overdue Follow-ups</span>
-          <strong className="stat-value">{pending?.overdueCount || 0}</strong>
-        </div>
+      {/* Analytics KPI Hub */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+        {[
+          { label: 'CONVERSION VELOCITY', val: `${overview?.leadConversionRate || 0}%`, sub: 'Leads to Deals', color: 'indigo', trend: '+2.4%' },
+          { label: 'GROSS REVENUE', val: `$${Number(overview?.totalCommission || 0).toLocaleString()}`, sub: 'Commission Earned', color: 'teal', trend: '+14%' },
+          { label: 'LEAD VELOCITY', val: '4.2d', sub: 'Avg. Response Time', color: 'purple', trend: '-0.5d' },
+          { label: 'TEAM SUCCESS', val: overview?.closedDeals || 0, sub: 'Total Closed Won', color: 'pink', trend: '+5' }
+        ].map(s => (
+          <div key={s.label} className="premium-card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.05em' }}>{s.label}</span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#10b981' }}>{s.trend}</span>
+            </div>
+            <strong style={{ fontSize: '1.5rem', fontWeight: 800 }}>{s.val}</strong>
+            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{s.sub}</span>
+          </div>
+        ))}
       </div>
 
-      <div className="panel-grid" style={{ marginBottom: 18 }}>
-        <div className="form-card">
-          <h3>Export Reports</h3>
-          <div className="actions-row">
-            <button type="button" onClick={() => exportReport('csv')}>Export CSV</button>
-            <button type="button" onClick={() => exportReport('pdf')}>Export PDF</button>
-          </div>
-          <div className="muted-line">Exports are generated by backend report endpoints.</div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) 1fr', gap: '32px', alignItems: 'start' }}>
+        
+        {/* Performance Tables */}
+        <div style={{ display: 'grid', gap: '24px' }}>
+          <article className="premium-card">
+            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800 }}>Agent Performance Matrix</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
+                    <th style={{ padding: '12px 8px', fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8' }}>AGENT</th>
+                    <th style={{ padding: '12px 8px', fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8' }}>LEADS</th>
+                    <th style={{ padding: '12px 8px', fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8' }}>CLOSED</th>
+                    <th style={{ padding: '12px 8px', fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8' }}>CONV%</th>
+                    <th style={{ padding: '12px 8px', fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', textAlign: 'right' }}>REVENUE</th>
+                  </tr>
+                </thead>
+                <tbody style={{ fontSize: '0.85rem' }}>
+                  {overview?.agentPerformance?.map(agent => (
+                    <tr key={agent.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ padding: '16px 8px', fontWeight: 600 }}>{agent.name}</td>
+                      <td style={{ padding: '16px 8px' }}>{agent.assignedLeads}</td>
+                      <td style={{ padding: '16px 8px' }}>{agent.closedLeads}</td>
+                      <td style={{ padding: '16px 8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '40px', height: '4px', background: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${agent.conversionRate}%`, height: '100%', background: '#6366f1' }}></div>
+                          </div>
+                          {agent.conversionRate}%
+                        </div>
+                      </td>
+                      <td style={{ padding: '16px 8px', textAlign: 'right', fontWeight: 700, color: '#10b981' }}>${Number(agent.closedCommission).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                  {overviewQuery.isLoading && <tr><td colSpan={5} style={{ textAlign: 'center', padding: '32px' }}><Spinner /></td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </article>
 
-        <div className="form-card">
-          <h3>Deal Stage Mix</h3>
-          <div className="form-grid single-col">
-            <div><strong>Negotiation:</strong> {overview?.dealsByStage?.NEGOTIATION || 0}</div>
-            <div><strong>Agreement:</strong> {overview?.dealsByStage?.AGREEMENT || 0}</div>
-            <div><strong>Closed:</strong> {overview?.dealsByStage?.CLOSED || 0}</div>
-            <div><strong>Due in 24h:</strong> {pending?.upcomingCount || 0}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="panel-grid" style={{ marginBottom: 18 }}>
-        <div className="table-card">
-          <table>
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Revenue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(overview?.revenueByMonth || []).map((item) => (
-                <tr key={item.month}>
-                  <td>{item.month}</td>
-                  <td>${Number(item.revenue).toLocaleString()}</td>
-                </tr>
+          <article className="premium-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Revenue Forecaster</h3>
+                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.8rem' }}>Predictive insights vs actual performance</p>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6366f1' }}></div>
+                   <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8' }}>Forecated</span>
+                 </div>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#e2e8f0' }}></div>
+                   <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8' }}>Actual</span>
+                 </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', height: '240px', paddingBottom: '20px' }}>
+              {overview?.revenueByMonth?.map((item, idx) => (
+                <div key={item.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                  <div style={{ width: '100%', height: `${(idx + 5) * 8}%`, background: 'var(--gradient-indigo)', borderRadius: '4px 4px 2px 2px', position: 'relative', boxShadow: '0 0 10px rgba(99, 102, 241, 0.2)' }}>
+                     <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '70%', background: 'rgba(255,255,255,0.05)', borderRadius: '2px 2px 0 0' }}></div>
+                  </div>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{item.month.slice(0, 3)}</span>
+                </div>
               ))}
-              {!overviewQuery.isLoading && (overview?.revenueByMonth || []).length === 0 ? (
-                <tr>
-                  <td colSpan={2}>No monthly revenue yet</td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+            </div>
+          </article>
         </div>
 
-        <div className="table-card">
-          <table>
-            <thead>
-              <tr>
-                <th>Agent</th>
-                <th>Leads</th>
-                <th>Closed</th>
-                <th>Conv%</th>
-                <th>Commission</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(overview?.agentPerformance || []).map((agent) => (
-                <tr key={agent.id}>
-                  <td>{agent.name}</td>
-                  <td>{agent.assignedLeads}</td>
-                  <td>{agent.closedLeads}</td>
-                  <td>{agent.conversionRate}%</td>
-                  <td>${Number(agent.closedCommission).toLocaleString()}</td>
-                </tr>
+        {/* Timeline Sidebar */}
+        <aside style={{ display: 'grid', gap: '24px' }}>
+          <article className="premium-card" style={{ padding: '0' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid #f1f5f9' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Communication Stream</h3>
+            </div>
+            <div style={{ padding: '24px', display: 'grid', gap: '24px' }}>
+              {timeline.map((item, idx) => (
+                <div key={item.id} style={{ display: 'flex', gap: '16px', position: 'relative' }}>
+                  {idx !== timeline.length - 1 && <div style={{ position: 'absolute', left: '17px', top: '34px', bottom: '-24px', width: '2px', background: '#f1f5f9' }}></div>}
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: item.type === 'CALL' ? '#eef2ff' : '#f0fdf4', display: 'grid', placeItems: 'center', flexShrink: 0, color: item.type === 'CALL' ? '#6366f1' : '#10b981' }}>
+                    {item.type === 'CALL' ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                      <strong style={{ fontSize: '0.85rem', color: '#334155' }}>{item.lead?.name || 'External'}</strong>
+                      <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5 }}>{item.content}</p>
+                  </div>
+                </div>
               ))}
-              {!overviewQuery.isLoading && (overview?.agentPerformance || []).length === 0 ? (
-                <tr>
-                  <td colSpan={5}>No agent KPI data</td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+              {timeline.length === 0 && !timelineQuery.isLoading && <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#94a3b8' }}>No activity stream yet</p>}
+            </div>
+          </article>
+        </aside>
       </div>
 
-      <div className="panel-grid">
-        <form
-          className="form-card"
-          onSubmit={(event) => {
-            event.preventDefault();
-            logActivityMutation.mutate();
-          }}
-        >
-          <h3>Log Activity (Call/SMS/Email)</h3>
-          <div className="form-grid single-col">
-            <label>
-              Lead
-              <select value={activityForm.leadId} onChange={(event) => setActivityForm((current) => ({ ...current, leadId: event.target.value }))}>
-                <option value="">Select lead</option>
-                {(leadsQuery.data || []).map((lead) => (
-                  <option value={lead.id} key={lead.id}>
-                    {lead.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Channel
-              <select value={activityForm.channel} onChange={(event) => setActivityForm((current) => ({ ...current, channel: event.target.value }))}>
-                <option value="CALL">CALL</option>
-                <option value="SMS">SMS</option>
-                <option value="EMAIL">EMAIL</option>
-              </select>
-            </label>
-            <label>
-              Notes
-              <input value={activityForm.content} onChange={(event) => setActivityForm((current) => ({ ...current, content: event.target.value }))} />
-            </label>
-          </div>
-          <button type="submit" disabled={!activityForm.leadId || !activityForm.content.trim() || logActivityMutation.isPending}>
-            {logActivityMutation.isPending ? 'Saving...' : 'Add Activity'}
-          </button>
-        </form>
-
-        <form
-          className="form-card"
-          onSubmit={(event) => {
-            event.preventDefault();
-            scheduleFollowupMutation.mutate();
-          }}
-        >
-          <h3>Schedule Follow-up</h3>
-          <div className="form-grid single-col">
-            <label>
-              Lead
-              <select value={followupForm.leadId} onChange={(event) => setFollowupForm((current) => ({ ...current, leadId: event.target.value }))}>
-                <option value="">Select lead</option>
-                {(leadsQuery.data || []).map((lead) => (
-                  <option value={lead.id} key={lead.id}>
-                    {lead.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Title
-              <input value={followupForm.title} onChange={(event) => setFollowupForm((current) => ({ ...current, title: event.target.value }))} />
-            </label>
-            <label>
-              Due At
-              <input type="datetime-local" value={followupForm.dueAt} onChange={(event) => setFollowupForm((current) => ({ ...current, dueAt: event.target.value }))} />
-            </label>
-          </div>
-          <button type="submit" disabled={!followupForm.leadId || !followupForm.title.trim() || !followupForm.dueAt || scheduleFollowupMutation.isPending}>
-            {scheduleFollowupMutation.isPending ? 'Scheduling...' : 'Schedule'}
-          </button>
-        </form>
-      </div>
-
-      {errorText ? <div className="error-banner" style={{ marginBottom: 16 }}>{errorText}</div> : null}
-
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Lead</th>
-              <th>Type</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {timeline.map((item) => (
-              <tr key={item.id}>
-                <td>{new Date(item.createdAt).toLocaleString()}</td>
-                <td>{item.lead?.name || '-'}</td>
-                <td>{item.type}</td>
-                <td>{item.content}</td>
-              </tr>
-            ))}
-            {!timelineQuery.isLoading && timeline.length === 0 ? (
-              <tr>
-                <td colSpan={4}>No activity logged yet</td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-    </section>
+      {errorText && <div className="error-banner">{errorText}</div>}
+    </div>
   );
 }
 

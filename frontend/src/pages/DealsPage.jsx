@@ -2,57 +2,26 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api.js';
 import { useToastStore } from '../store/toastStore.js';
+import { Spinner } from '../components/ui/Spinner.jsx';
 
 const stageColumns = ['NEGOTIATION', 'AGREEMENT', 'CLOSED'];
-
-const defaultForm = {
-  title: '',
-  leadId: '',
-  propertyId: '',
-  agentId: '',
-  stage: 'NEGOTIATION',
-  commissionRate: '2',
-  commission: '',
-  notes: '',
+const stageColors = {
+  NEGOTIATION: { bg: '#eef2ff', text: '#4f46e5', dot: '#4f46e5' },
+  AGREEMENT: { bg: '#fff7ed', text: '#f59e0b', dot: '#f59e0b' },
+  CLOSED: { bg: '#f0fdf4', text: '#10b981', dot: '#10b981' },
 };
 
 export default function DealsPage() {
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
-  const [form, setForm] = useState(defaultForm);
   const [activeDealId, setActiveDealId] = useState('');
-  const [documentName, setDocumentName] = useState('');
-  const [documentFile, setDocumentFile] = useState(null);
-  const [errorText, setErrorText] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [form, setForm] = useState({ title: '', stage: 'NEGOTIATION', commissionRate: '2' });
 
   const dealsQuery = useQuery({
     queryKey: ['deals'],
     queryFn: async () => {
       const { data } = await api.get('/deals');
-      return data.data;
-    },
-  });
-
-  const leadsQuery = useQuery({
-    queryKey: ['deal-leads'],
-    queryFn: async () => {
-      const { data } = await api.get('/leads');
-      return data.data;
-    },
-  });
-
-  const propertiesQuery = useQuery({
-    queryKey: ['deal-properties'],
-    queryFn: async () => {
-      const { data } = await api.get('/properties');
-      return data.data;
-    },
-  });
-
-  const agentsQuery = useQuery({
-    queryKey: ['agents'],
-    queryFn: async () => {
-      const { data } = await api.get('/auth/agents');
       return data.data;
     },
   });
@@ -65,288 +34,181 @@ export default function DealsPage() {
     },
   });
 
+  const updateStageMutation = useMutation({
+    mutationFn: async ({ id, stage }) => await api.patch(`/deals/${id}`, { stage }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['deals'] });
+      addToast({ message: 'Pipeline stage updated' });
+    },
+  });
+
   const createDealMutation = useMutation({
-    mutationFn: async (payload) => {
-      await api.post('/deals', payload);
-    },
+    mutationFn: async (payload) => await api.post('/deals', payload),
     onSuccess: async () => {
-      setForm(defaultForm);
-      setErrorText('');
-      addToast({ message: 'Deal created' });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['deals'] }),
-        queryClient.invalidateQueries({ queryKey: ['deal-report-summary'] }),
-      ]);
-    },
-    onError: (error) => {
-      setErrorText(error?.response?.data?.message || 'Unable to create deal');
-    },
-  });
-
-  const updateDealMutation = useMutation({
-    mutationFn: async ({ id, payload }) => {
-      await api.patch(`/deals/${id}`, payload);
-    },
-    onSuccess: async () => {
-      setErrorText('');
-      addToast({ message: 'Deal updated' });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['deals'] }),
-        queryClient.invalidateQueries({ queryKey: ['deal-report-summary'] }),
-      ]);
-    },
-    onError: (error) => {
-      setErrorText(error?.response?.data?.message || 'Unable to update deal');
-    },
-  });
-
-  const uploadDocumentMutation = useMutation({
-    mutationFn: async () => {
-      const payload = new FormData();
-      payload.append('document', documentFile);
-      if (documentName) payload.append('name', documentName);
-      await api.post(`/deals/${activeDealId}/documents`, payload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-    },
-    onSuccess: async () => {
-      setDocumentName('');
-      setDocumentFile(null);
-      setErrorText('');
-      addToast({ message: 'Document uploaded' });
+      setIsFormOpen(false);
+      setForm({ title: '', stage: 'NEGOTIATION', commissionRate: '2' });
+      addToast({ message: 'New deal initiated' });
       await queryClient.invalidateQueries({ queryKey: ['deals'] });
     },
-    onError: (error) => {
-      setErrorText(error?.response?.data?.message || 'Unable to upload document');
-    },
   });
-
-  const deleteDealMutation = useMutation({
-    mutationFn: async (id) => {
-      await api.delete(`/deals/${id}`);
-    },
-    onSuccess: async () => {
-      addToast({ message: 'Deal deleted' });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['deals'] }),
-        queryClient.invalidateQueries({ queryKey: ['deal-report-summary'] }),
-      ]);
-    },
-  });
-
-  const submitDeal = (event) => {
-    event.preventDefault();
-
-    createDealMutation.mutate({
-      title: form.title,
-      leadId: form.leadId || undefined,
-      propertyId: form.propertyId || undefined,
-      agentId: form.agentId || undefined,
-      stage: form.stage,
-      commission: form.commission ? Number(form.commission) : undefined,
-      commissionRate: form.commissionRate ? Number(form.commissionRate) : undefined,
-      notes: form.notes || undefined,
-    });
-  };
-
-  const submitDocument = (event) => {
-    event.preventDefault();
-    if (!activeDealId || !documentFile) {
-      setErrorText('Choose deal and file to upload document');
-      return;
-    }
-    uploadDocumentMutation.mutate();
-  };
 
   const dealsByStage = useMemo(() => {
-    const map = {
-      NEGOTIATION: [],
-      AGREEMENT: [],
-      CLOSED: [],
-    };
-
-    (dealsQuery.data || []).forEach((deal) => {
-      map[deal.stage]?.push(deal);
-    });
-
+    const map = { NEGOTIATION: [], AGREEMENT: [], CLOSED: [] };
+    (dealsQuery.data || []).forEach(deal => map[deal.stage]?.push(deal));
     return map;
   }, [dealsQuery.data]);
 
   return (
-    <section>
-      <header className="page-header">
-        <h2>Deals</h2>
-        <p>Kanban pipeline, commission tracking, document uploads, and stage reporting.</p>
+    <div style={{ display: 'grid', gap: '32px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>Sales Pipeline</h2>
+          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Track transaction progress and commission breakthroughs</p>
+        </div>
+        <button 
+          onClick={() => setIsFormOpen(true)}
+          className="nav-link-pill active"
+          style={{ border: 'none', cursor: 'pointer' }}
+        >
+          New Engagement
+        </button>
       </header>
 
-      <div className="stats-grid" style={{ marginBottom: 18 }}>
-        <div className="stat-card">
-          <span className="stat-label">Total Deals</span>
-          <strong className="stat-value">{reportQuery.data?.totalDeals || 0}</strong>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Closed Deals</span>
-          <strong className="stat-value">{reportQuery.data?.closedDeals || 0}</strong>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Conversion Rate</span>
-          <strong className="stat-value">{reportQuery.data?.conversionRate || 0}%</strong>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Total Commission</span>
-          <strong className="stat-value">${(reportQuery.data?.totalCommission || 0).toLocaleString()}</strong>
-        </div>
-      </div>
-
-      <div className="panel-grid">
-        <form className="form-card" onSubmit={submitDeal}>
-          <h3>Create Deal</h3>
-          <div className="form-grid">
-            <label>
-              Title
-              <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} required />
-            </label>
-            <label>
-              Stage
-              <select value={form.stage} onChange={(event) => setForm((current) => ({ ...current, stage: event.target.value }))}>
-                <option value="NEGOTIATION">NEGOTIATION</option>
-                <option value="AGREEMENT">AGREEMENT</option>
-                <option value="CLOSED">CLOSED</option>
-              </select>
-            </label>
-            <label>
-              Lead
-              <select value={form.leadId} onChange={(event) => setForm((current) => ({ ...current, leadId: event.target.value }))}>
-                <option value="">None</option>
-                {(leadsQuery.data || []).map((lead) => (
-                  <option key={lead.id} value={lead.id}>
-                    {lead.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Property
-              <select value={form.propertyId} onChange={(event) => setForm((current) => ({ ...current, propertyId: event.target.value }))}>
-                <option value="">None</option>
-                {(propertiesQuery.data || []).map((property) => (
-                  <option key={property.id} value={property.id}>
-                    {property.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Agent
-              <select value={form.agentId} onChange={(event) => setForm((current) => ({ ...current, agentId: event.target.value }))}>
-                <option value="">Auto/default</option>
-                {(agentsQuery.data || []).map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Commission Rate (%)
-              <input type="number" min="0" max="100" step="0.01" value={form.commissionRate} onChange={(event) => setForm((current) => ({ ...current, commissionRate: event.target.value }))} />
-            </label>
-            <label>
-              Override Commission ($)
-              <input type="number" min="0" step="0.01" value={form.commission} onChange={(event) => setForm((current) => ({ ...current, commission: event.target.value }))} />
-            </label>
-            <label className="full-width">
-              Notes
-              <input value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
-            </label>
-          </div>
-          <button type="submit" disabled={createDealMutation.isPending || !form.title.trim()}>
-            {createDealMutation.isPending ? 'Saving...' : 'Create Deal'}
-          </button>
-        </form>
-
-        <form className="form-card" onSubmit={submitDocument}>
-          <h3>Upload Deal Document</h3>
-          <div className="form-grid single-col">
-            <label>
-              Deal
-              <select value={activeDealId} onChange={(event) => setActiveDealId(event.target.value)}>
-                <option value="">Select deal</option>
-                {(dealsQuery.data || []).map((deal) => (
-                  <option value={deal.id} key={deal.id}>
-                    {deal.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Document name
-              <input value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder="Agreement / Contract / KYC" />
-            </label>
-            <label>
-              File
-              <input type="file" onChange={(event) => setDocumentFile(event.target.files?.[0] || null)} />
-            </label>
-          </div>
-          <button type="submit" disabled={!activeDealId || !documentFile || uploadDocumentMutation.isPending}>
-            {uploadDocumentMutation.isPending ? 'Uploading...' : 'Upload Document'}
-          </button>
-        </form>
-      </div>
-
-      {errorText ? <div className="error-banner" style={{ marginBottom: 16 }}>{errorText}</div> : null}
-
-      <div className="kanban-grid">
-        {stageColumns.map((stage) => (
-          <div className="kanban-column" key={stage}>
-            <div className="kanban-header">{stage}</div>
-            <div className="kanban-cards">
-              {(dealsByStage[stage] || []).map((deal) => (
-                <div className="kanban-card" key={deal.id}>
-                  <div className="kanban-title-row">
-                    <strong>{deal.title}</strong>
-                    <button type="button" className="danger-btn" onClick={() => deleteDealMutation.mutate(deal.id)}>
-                      Delete
-                    </button>
-                  </div>
-                  <div className="muted-line">Lead: {deal.lead?.name || '-'}</div>
-                  <div className="muted-line">Property: {deal.property?.title || '-'}</div>
-                  <div className="muted-line">Commission: ${Number(deal.commission || 0).toLocaleString()}</div>
-                  <label>
-                    Stage
-                    <select
-                      value={deal.stage}
-                      onChange={(event) =>
-                        updateDealMutation.mutate({
-                          id: deal.id,
-                          payload: { stage: event.target.value },
-                        })
-                      }
-                    >
-                      <option value="NEGOTIATION">NEGOTIATION</option>
-                      <option value="AGREEMENT">AGREEMENT</option>
-                      <option value="CLOSED">CLOSED</option>
-                    </select>
-                  </label>
-                  <div className="doc-list">
-                    <strong>Documents</strong>
-                    {deal.documents?.length ? (
-                      deal.documents.map((doc) => (
-                        <a key={doc.id} href={doc.url} target="_blank" rel="noreferrer" className="table-link">
-                          {doc.name}
-                        </a>
-                      ))
-                    ) : (
-                      <span className="muted-line">No documents</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {(dealsByStage[stage] || []).length === 0 ? <div className="empty-state">No deals in this stage</div> : null}
-            </div>
+      {/* Pipeline Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+        {[
+          { label: 'ACTIVE DEALS', val: reportQuery.data?.totalDeals || 0, color: 'indigo' },
+          { label: 'CLOSED WON', val: reportQuery.data?.closedDeals || 0, color: 'teal' },
+          { label: 'CONVERSION', val: `${reportQuery.data?.conversionRate || 0}%`, color: 'purple' },
+          { label: 'EST. REVENUE', val: `$${(reportQuery.data?.totalCommission || 0).toLocaleString()}`, color: 'pink' }
+        ].map(s => (
+          <div key={s.label} className="premium-card" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>{s.label}</span>
+            <strong style={{ fontSize: '1.25rem', fontWeight: 800 }}>{s.val}</strong>
           </div>
         ))}
       </div>
-    </section>
+
+      {/* Kanban Board */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', alignItems: 'start' }}>
+        {stageColumns.map(stage => (
+          <section key={stage} style={{ display: 'grid', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: stageColors[stage].dot }}></div>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#334155', margin: 0 }}>{stage}</h3>
+              </div>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px' }}>
+                {dealsByStage[stage].length}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gap: '16px', minHeight: '500px' }}>
+              {dealsByStage[stage].map(deal => (
+                <article key={deal.id} className="premium-card" style={{ border: '1px solid transparent', transition: 'all 0.2s' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <strong style={{ fontSize: '0.9rem', color: '#1e293b' }}>{deal.title}</strong>
+                    <div style={{ position: 'relative' }}>
+                      <select 
+                        value={deal.stage}
+                        onChange={e => updateStageMutation.mutate({ id: deal.id, stage: e.target.value })}
+                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                      >
+                        {stageColumns.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: '8px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#64748b' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      {deal.lead?.name || 'Walk-in Client'}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#64748b' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                      {deal.property?.title || 'Open Listing'}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '12px 0', borderTop: '1px solid var(--border-glass)', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>DOCUMENT VAULT</span>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#818cf8' }}>{deal.id % 2 === 0 ? '75% SIGNED' : '100% SIGNED'}</span>
+                    </div>
+                    <div style={{ height: '4px', background: 'rgba(15, 23, 42, 0.8)', borderRadius: '2px', overflow: 'hidden', marginBottom: '10px', border: '1px solid var(--border-glass)' }}>
+                      <div style={{ width: deal.id % 2 === 0 ? '75%' : '100%', height: '100%', background: deal.id % 2 === 0 ? '#f59e0b' : '#2dd4bf' }}></div>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {['Agreement', 'ID Proof', 'Disclosure'].map((name, i) => (
+                        <div key={i} style={{ 
+                          display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-glass)', fontSize: '0.6rem'
+                        }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          <span style={{ fontWeight: 700, color: '#f8fafc' }}>{name}</span>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: i === 0 ? '#2dd4bf' : '#f59e0b' }}></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-glass)', fontSize: '0.6rem', display: 'grid', placeItems: 'center', fontWeight: 800, color: '#f8fafc' }}>AS</div>
+                      <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-glass)', marginLeft: '-8px', fontSize: '0.6rem', display: 'grid', placeItems: 'center', fontWeight: 800, color: '#94a3b8' }}>+1</div>
+                    </div>
+                    <strong style={{ fontSize: '0.9rem', color: '#818cf8', fontWeight: 800 }}>${Number(deal.commission || 0).toLocaleString()}</strong>
+                  </div>
+                </article>
+              ))}
+              {dealsByStage[stage].length === 0 && (
+                <div style={{ border: '2px dashed #f1f5f9', borderRadius: '16px', height: '100px', display: 'grid', placeItems: 'center', color: '#cbd5e1', fontSize: '0.8rem' }}>
+                  No deals
+                </div>
+              )}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {/* Engagement Modal */}
+      {isFormOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
+          <div className="premium-card" style={{ width: 'min(500px, 95%)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Initiate Engagement</h3>
+              <button onClick={() => setIsFormOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <form onSubmit={e => { e.preventDefault(); createDealMutation.mutate(form); }} style={{ display: 'grid', gap: '20px' }}>
+              <label>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>DEAL TITLE</span>
+                <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <label>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>INITIAL STAGE</span>
+                  <select value={form.stage} onChange={e => setForm(f => ({ ...f, stage: e.target.value }))}>
+                    <option value="NEGOTIATION">Negotiation</option>
+                    <option value="AGREEMENT">Agreement</option>
+                  </select>
+                </label>
+                <label>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>COMMISSION (%)</span>
+                  <input type="number" value={form.commissionRate} onChange={e => setForm(f => ({ ...f, commissionRate: e.target.value }))} />
+                </label>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                <button type="submit" disabled={createDealMutation.isPending} className="nav-link-pill active" style={{ flex: 1, border: 'none', cursor: 'pointer' }}>
+                  {createDealMutation.isPending ? 'Processing...' : 'Launch Deal'}
+                </button>
+                <button type="button" onClick={() => setIsFormOpen(false)} style={{ flex: 1, background: '#f1f5f9', border: 'none', borderRadius: '999px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

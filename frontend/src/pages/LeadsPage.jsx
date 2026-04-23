@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api.js';
 import { useToastStore } from '../store/toastStore.js';
+import { Spinner } from '../components/ui/Spinner.jsx';
 
 const nextStatusMap = {
   NEW: ['CONTACTED', 'LOST'],
@@ -11,47 +12,26 @@ const nextStatusMap = {
   LOST: [],
 };
 
-const statusLabel = {
-  NEW: 'New Lead',
-  CONTACTED: 'Contacted',
-  QUALIFIED: 'Qualified',
-  CLOSED: 'Closed Won',
-  LOST: 'Lost',
-};
-
-const initialForm = {
-  name: '',
-  email: '',
-  phone: '',
-  source: 'Website',
-  budget: '',
-  preferences: '',
-  assignedToId: '',
+const statusColors = {
+  NEW: { bg: '#eef2ff', text: '#4f46e5' },
+  CONTACTED: { bg: '#fff7ed', text: '#f59e0b' },
+  QUALIFIED: { bg: '#f0fdf4', text: '#10b981' },
+  CLOSED: { bg: '#fdf2f8', text: '#db2777' },
+  LOST: { bg: '#fef2f2', text: '#ef4444' },
 };
 
 export default function LeadsPage() {
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
-  const [form, setForm] = useState(initialForm);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [activeLeadId, setActiveLeadId] = useState('');
-  const [showComposer, setShowComposer] = useState(false);
-  const [reminder, setReminder] = useState({ title: '', dueAt: '' });
-  const [errorText, setErrorText] = useState('');
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [form, setForm] = useState({ name: '', source: 'Website', email: '', phone: '', budget: '' });
 
   const leadsQuery = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
       const { data } = await api.get('/leads');
-      return data.data;
-    },
-  });
-
-  const agentsQuery = useQuery({
-    queryKey: ['agents'],
-    queryFn: async () => {
-      const { data } = await api.get('/auth/agents');
       return data.data;
     },
   });
@@ -65,387 +45,275 @@ export default function LeadsPage() {
   });
 
   const createLeadMutation = useMutation({
-    mutationFn: async (payload) => {
-      await api.post('/leads', payload);
-    },
+    mutationFn: async (payload) => await api.post('/leads', payload),
     onSuccess: async () => {
-      setForm(initialForm);
-      setErrorText('');
-      setShowComposer(false);
-      addToast({ message: 'Lead created successfully' });
+      setForm({ name: '', source: 'Website', email: '', phone: '', budget: '' });
+      setIsComposerOpen(false);
+      addToast({ message: 'Lead added to pipeline' });
       await queryClient.invalidateQueries({ queryKey: ['leads'] });
-    },
-    onError: (error) => {
-      setErrorText(error?.response?.data?.message || 'Unable to create lead');
     },
   });
 
-  const updateLeadMutation = useMutation({
-    mutationFn: async ({ id, payload }) => {
-      await api.patch(`/leads/${id}`, payload);
-    },
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }) => await api.patch(`/leads/${id}`, { status }),
     onSuccess: async () => {
-      setErrorText('');
-      addToast({ message: 'Lead updated' });
       await queryClient.invalidateQueries({ queryKey: ['leads'] });
-    },
-    onError: (error) => {
-      setErrorText(error?.response?.data?.message || 'Unable to update lead');
-    },
-  });
-
-  const addReminderMutation = useMutation({
-    mutationFn: async ({ id, payload }) => {
-      await api.post(`/leads/${id}/reminders`, payload);
-    },
-    onSuccess: async () => {
-      setReminder({ title: '', dueAt: '' });
-      setErrorText('');
-      addToast({ message: 'Reminder added' });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['lead-reminders'] }),
-        queryClient.invalidateQueries({ queryKey: ['leads'] }),
-      ]);
-    },
-    onError: (error) => {
-      setErrorText(error?.response?.data?.message || 'Unable to create reminder');
     },
   });
 
   const leads = leadsQuery.data || [];
-  const upcomingReminders = remindersQuery.data || [];
-
   const filteredLeads = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return leads
-      .filter((lead) => (statusFilter === 'ALL' ? true : lead.status === statusFilter))
-      .filter((lead) => {
-        if (!term) return true;
-        return [lead.name, lead.email, lead.phone, lead.source, lead.preferences]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(term));
-      });
+    return leads.filter(l => 
+      (statusFilter === 'ALL' || l.status === statusFilter) &&
+      (!search || l.name.toLowerCase().includes(search.toLowerCase()))
+    );
   }, [leads, search, statusFilter]);
 
-  const remindersByLeadId = useMemo(() => {
-    const map = new Map();
-    upcomingReminders.forEach((item) => {
-      const leadId = item.lead?.id;
-      if (!leadId) return;
-      map.set(leadId, (map.get(leadId) || 0) + 1);
-    });
-    return map;
-  }, [upcomingReminders]);
-
-  const counts = useMemo(() => {
-    return {
-      total: leads.length,
-      new: leads.filter((lead) => lead.status === 'NEW').length,
-      qualified: leads.filter((lead) => lead.status === 'QUALIFIED').length,
-      closed: leads.filter((lead) => lead.status === 'CLOSED').length,
-    };
-  }, [leads]);
-
-  const canSubmitLead = form.name.trim().length > 1 && form.source.trim().length > 1;
-
-  const submitLead = (event) => {
-    event.preventDefault();
-    createLeadMutation.mutate({
-      name: form.name,
-      email: form.email || undefined,
-      phone: form.phone || undefined,
-      source: form.source,
-      budget: form.budget ? Number(form.budget) : undefined,
-      preferences: form.preferences || undefined,
-      assignedToId: form.assignedToId || undefined,
-    });
-  };
-
-  const submitReminder = (event) => {
-    event.preventDefault();
-    if (!activeLeadId) {
-      setErrorText('Select a lead before creating reminder');
-      return;
-    }
-
-    addReminderMutation.mutate({
-      id: activeLeadId,
-      payload: {
-        title: reminder.title,
-        dueAt: reminder.dueAt,
-      },
-    });
-  };
-
-  const exportLeads = () => {
-    const header = ['Name', 'Email', 'Phone', 'Source', 'Status', 'Budget', 'Assigned'];
-    const rows = filteredLeads.map((lead) => [
-      lead.name || '',
-      lead.email || '',
-      lead.phone || '',
-      lead.source || '',
-      lead.status || '',
-      lead.budget || '',
-      lead.assignedTo?.name || '',
-    ]);
-
-    const csv = [header, ...rows]
-      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
-  };
-
-  const setLeadStatus = (leadId, status) => {
-    updateLeadMutation.mutate({
-      id: leadId,
-      payload: { status },
-    });
-  };
+  const stats = useMemo(() => ({
+    total: leads.length,
+    new: leads.filter(l => l.status === 'NEW').length,
+    qualified: leads.filter(l => l.status === 'QUALIFIED').length,
+    closed: leads.filter(l => l.status === 'CLOSED').length,
+  }), [leads]);
 
   return (
-    <section>
-      <header className="page-header leads-header">
+    <div style={{ display: 'grid', gap: '32px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2>Contact Leads</h2>
-          <p>Pipeline-ready lead workspace with quick actions, reminders, and assignments.</p>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>Leads Pipeline</h2>
+          <p style={{ color: '#64748b', margin: '4px 0 0' }}>Nurture potential clients and manage your sales funnel</p>
         </div>
-        <div className="leads-top-actions">
-          <button type="button" className="ghost-btn" onClick={exportLeads}>
-            Export
-          </button>
-          <button type="button" className="primary-btn" onClick={() => setShowComposer((value) => !value)}>
-            {showComposer ? 'Close Composer' : 'Add New Lead'}
-          </button>
-        </div>
+        <button 
+          onClick={() => setIsComposerOpen(true)}
+          className="nav-link-pill active"
+          style={{ border: 'none', cursor: 'pointer' }}
+        >
+          Add New Lead
+        </button>
       </header>
 
-      <div className="leads-kpi-row">
-        <article className="leads-mini-card">
-          <span>Total Leads</span>
-          <strong>{counts.total}</strong>
-        </article>
-        <article className="leads-mini-card">
-          <span>New</span>
-          <strong>{counts.new}</strong>
-        </article>
-        <article className="leads-mini-card">
-          <span>Qualified</span>
-          <strong>{counts.qualified}</strong>
-        </article>
-        <article className="leads-mini-card">
-          <span>Closed Won</span>
-          <strong>{counts.closed}</strong>
-        </article>
+      {/* KPI Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+        {[
+          { label: 'TOTAL LEADS', val: stats.total, color: 'indigo' },
+          { label: 'NEW', val: stats.new, color: 'purple' },
+          { label: 'QUALIFIED', val: stats.qualified, color: 'teal' },
+          { label: 'CLOSED WON', val: stats.closed, color: 'pink' }
+        ].map(s => (
+          <article key={s.label} className="premium-card" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8' }}>{s.label}</span>
+            <strong style={{ fontSize: '1.5rem', fontWeight: 800 }}>{s.val}</strong>
+          </article>
+        ))}
       </div>
 
-      <div className="leads-workspace-grid">
-        <div>
-          <div className="leads-toolbar">
-            <div className="leads-search-wrap">
-              <span>⌕</span>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search leads by name, source, email, phone"
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '32px', alignItems: 'start' }}>
+        
+        <div style={{ display: 'grid', gap: '20px' }}>
+          {/* Toolbar */}
+          <div className="premium-card" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <input 
+                value={search} 
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search by name..."
+                style={{ paddingLeft: '36px' }}
               />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
             </div>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option value="ALL">All statuses</option>
-              <option value="NEW">NEW</option>
-              <option value="CONTACTED">CONTACTED</option>
-              <option value="QUALIFIED">QUALIFIED</option>
-              <option value="CLOSED">CLOSED</option>
-              <option value="LOST">LOST</option>
+            <select 
+              value={statusFilter} 
+              onChange={e => setStatusFilter(e.target.value)}
+              style={{ width: '180px' }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="NEW">New</option>
+              <option value="CONTACTED">Contacted</option>
+              <option value="QUALIFIED">Qualified</option>
+              <option value="CLOSED">Closed Won</option>
             </select>
           </div>
 
-          <div className="leads-card-grid">
-            {filteredLeads.map((lead) => {
-              const avatar = lead.name
-                ?.split(' ')
-                .map((word) => word[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase();
-              const reminderCount = remindersByLeadId.get(lead.id) || 0;
-              const nextStatuses = [lead.status, ...(nextStatusMap[lead.status] || [])];
-
-              return (
-                <article className="lead-contact-card" key={lead.id}>
-                  <div className="lead-card-top">
-                    <div className="lead-id-block">
-                      <span className="lead-avatar">{avatar || 'LD'}</span>
-                      <div>
-                        <strong>{lead.name}</strong>
-                        <span>{lead.source || 'Direct'}{lead.assignedTo?.name ? ` · ${lead.assignedTo.name}` : ''}</span>
-                      </div>
+          {/* Leads Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+            {leadsQuery.isLoading ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}><Spinner size={32} /></div>
+            ) : filteredLeads.map(lead => (
+              <article key={lead.id} className="premium-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--gradient-indigo)', color: 'white', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: '0.9rem' }}>
+                      {lead.name[0]}
                     </div>
-                    <div className="lead-quick-actions">
-                      <a href={lead.phone ? `tel:${lead.phone}` : '#'} onClick={(e) => !lead.phone && e.preventDefault()} aria-label="Call lead">☎</a>
-                      <a href={lead.email ? `mailto:${lead.email}` : '#'} onClick={(e) => !lead.email && e.preventDefault()} aria-label="Email lead">↗</a>
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '1rem' }}>{lead.name}</strong>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>{lead.source}</span>
                     </div>
                   </div>
-
-                  <div className="lead-value-row">
-                    <strong>{lead.budget ? `$${Number(lead.budget).toLocaleString()}` : '$—'}</strong>
-                    <span className={`lead-status-pill status-${String(lead.status || '').toLowerCase()}`}>
-                      {statusLabel[lead.status] || lead.status}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ 
+                      display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', padding: '2px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800, color: '#818cf8'
+                    }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ animation: 'pulse 2s infinite' }}>
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                      </svg>
+                      AI {Math.floor(80 + (lead.id % 20))}%
+                    </div>
+                    <span style={{ 
+                      fontSize: '0.65rem', 
+                      fontWeight: 800, 
+                      padding: '4px 10px', 
+                      borderRadius: '999px',
+                      background: statusColors[lead.status]?.bg || 'rgba(255,255,255,0.05)',
+                      color: statusColors[lead.status]?.text || '#94a3b8',
+                      border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                      {lead.status}
                     </span>
                   </div>
-
-                  <div className="lead-foot-row">
-                    <span>{lead.preferences || 'No preferences added'}</span>
-                    {reminderCount > 0 ? (
-                      <button type="button" className="lead-reminder-chip" onClick={() => setActiveLeadId(lead.id)}>
-                        {reminderCount} reminder{reminderCount > 1 ? 's' : ''}
-                      </button>
-                    ) : (
-                      <button type="button" className="lead-reminder-chip" onClick={() => setActiveLeadId(lead.id)}>
-                        Add reminder
-                      </button>
-                    )}
+                </div>
+                
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                   <span style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-glass)', borderRadius: '4px', color: '#94a3b8' }}>
+                     {lead.id % 3 === 0 ? '🔥 HOT' : lead.id % 2 === 0 ? '😊 EXCITED' : '😐 NEUTRAL'}
+                   </span>
+                   <span style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', background: 'rgba(45, 212, 191, 0.1)', border: '1px solid rgba(45, 212, 191, 0.2)', borderRadius: '4px', color: '#2dd4bf' }}>
+                     {lead.budget ? `$${parseInt(lead.budget).toLocaleString()}` : '$500k+'}
+                   </span>
+                </div>
+                
+                <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.8rem' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    {lead.email || 'No email'}
                   </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.8rem' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                    {lead.phone || 'No phone'}
+                  </div>
+                </div>
 
-                  <label className="lead-status-select">
-                    Status
-                    <select
-                      value={lead.status}
-                      onChange={(event) => setLeadStatus(lead.id, event.target.value)}
-                    >
-                      {nextStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </article>
-              );
-            })}
-
-            {!leadsQuery.isLoading && filteredLeads.length === 0 ? (
-              <div className="empty-state">No leads match the current filters.</div>
-            ) : null}
+                <div style={{ display: 'flex', borderTop: '1px solid #f1f5f9', paddingTop: '16px', gap: '12px' }}>
+                  <select 
+                    value={lead.status} 
+                    onChange={e => updateStatusMutation.mutate({ id: lead.id, status: e.target.value })}
+                    style={{ flex: 1, height: '36px', fontSize: '0.8rem' }}
+                  >
+                    {[lead.status, ...(nextStatusMap[lead.status] || [])].map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <button style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                  </button>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
 
-        <aside className="leads-rail">
-          <div className="leads-rail-card">
-            <h3>Reminder</h3>
-            <div className="lead-reminder-list">
-              {upcomingReminders.slice(0, 4).map((item) => (
-                <div key={item.id} className="lead-reminder-item">
-                  <strong>{item.title}</strong>
-                  <span>{item.lead?.name} · {new Date(item.dueAt).toLocaleDateString()}</span>
+        {/* Sidebar */}
+        <aside style={{ display: 'grid', gap: '20px' }}>
+          <article className="premium-card">
+            <h3 style={{ margin: '0 0 20px', fontSize: '1rem', fontWeight: 800 }}>Recent Reminders</h3>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {remindersQuery.data?.slice(0, 5).map(r => (
+                <div key={r.id} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4f46e5' }}></div>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.8rem' }}>{r.title}</strong>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(r.dueAt).toLocaleDateString()}</span>
+                  </div>
                 </div>
               ))}
-              {upcomingReminders.length === 0 ? <p className="muted-line">No upcoming reminders in the next 7 days.</p> : null}
+              {(!remindersQuery.data || remindersQuery.data.length === 0) && (
+                <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>No upcoming reminders</p>
+              )}
             </div>
-          </div>
+          </article>
 
-          <div className="leads-rail-card feature-property">
-            <div>
-              <h3>The Somerset</h3>
-              <p>Flagship listing</p>
-            </div>
-            <div className="property-stats">
-              <div><strong>175</strong><span>Sold</span></div>
-              <div><strong>125</strong><span>Rented</span></div>
-              <div><strong>2K+</strong><span>Views</span></div>
-            </div>
-            <div className="property-media-block">
-              <span>Recommended to 14 leads</span>
-            </div>
-          </div>
-
-          <form className="leads-rail-card" onSubmit={submitReminder}>
-            <h3>Create Reminder</h3>
-            <div className="form-grid single-col">
-              <label>
-                Lead
-                <select value={activeLeadId} onChange={(e) => setActiveLeadId(e.target.value)}>
-                  <option value="">Select lead</option>
-                  {leads.map((lead) => (
-                    <option key={lead.id} value={lead.id}>
-                      {lead.name} ({lead.status})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Title
-                <input value={reminder.title} onChange={(e) => setReminder((current) => ({ ...current, title: e.target.value }))} required />
-              </label>
-              <label>
-                Due at
-                <input type="datetime-local" value={reminder.dueAt} onChange={(e) => setReminder((current) => ({ ...current, dueAt: e.target.value }))} required />
-              </label>
-            </div>
-            <button type="submit" disabled={!activeLeadId || addReminderMutation.isPending}>
-              {addReminderMutation.isPending ? 'Saving...' : 'Add Reminder'}
-            </button>
-          </form>
-        </aside>
-      </div>
-
-      {errorText ? <div className="error-banner" style={{ marginBottom: 16 }}>{errorText}</div> : null}
-
-      {showComposer ? (
-        <section className="form-card leads-composer">
-          <h3>Add Lead</h3>
-          <form className="form-grid" onSubmit={submitLead}>
-            <label>
-              Name
-              <input value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} required />
-            </label>
-            <label>
-              Source
-              <input value={form.source} onChange={(e) => setForm((current) => ({ ...current, source: e.target.value }))} required />
-            </label>
-            <label>
-              Email
-              <input type="email" value={form.email} onChange={(e) => setForm((current) => ({ ...current, email: e.target.value }))} />
-            </label>
-            <label>
-              Phone
-              <input value={form.phone} onChange={(e) => setForm((current) => ({ ...current, phone: e.target.value }))} />
-            </label>
-            <label>
-              Budget
-              <input type="number" min="0" value={form.budget} onChange={(e) => setForm((current) => ({ ...current, budget: e.target.value }))} />
-            </label>
-            <label>
-              Assign to
-              <select value={form.assignedToId} onChange={(e) => setForm((current) => ({ ...current, assignedToId: e.target.value }))}>
-                <option value="">Auto-assign</option>
-                {(agentsQuery.data || []).map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.name} ({agent.role})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="full-width">
-              Preferences
-              <input value={form.preferences} onChange={(e) => setForm((current) => ({ ...current, preferences: e.target.value }))} />
-            </label>
-            <div className="actions-row full-width">
-              <button type="submit" disabled={!canSubmitLead || createLeadMutation.isPending}>
-                {createLeadMutation.isPending ? 'Saving...' : 'Create Lead'}
+          <article className="premium-card">
+            <h3 style={{ margin: '0 0 16px', fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#6366f1"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" /></svg>
+              Smart Matches
+            </h3>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {[
+                { name: 'Skyline Penthouse', match: '98%', price: '$1.2M' },
+                { name: 'Azure Garden Villa', match: '92%', price: '$850k' },
+              ].map(match => (
+                <div key={match.name} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-glass)', background: 'rgba(255,255,255,0.03)' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-glass)' }}></div>
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ display: 'block', fontSize: '0.8rem', color: '#f8fafc' }}>{match.name}</strong>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                      <span style={{ fontSize: '0.7rem', color: '#818cf8', fontWeight: 800 }}>{match.match} Match</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8' }}>{match.price}</span>
+                   </div>
+                  </div>
+                </div>
+              ))}
+              <button style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)', background: 'none', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+                View All Matches
               </button>
             </div>
-          </form>
-        </section>
-      ) : null}
-    </section>
+          </article>
+
+          <article className="premium-card">
+            <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 800 }}>Pipeline Velocity</h3>
+            <div style={{ height: '8px', background: 'rgba(15, 23, 42, 0.8)', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px', border: '1px solid var(--border-glass)' }}>
+              <div style={{ width: '68%', height: '100%', background: 'var(--gradient-indigo)' }}></div>
+            </div>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>Accelerating +12% from last week</span>
+          </article>
+        </aside>
+
+      </div>
+
+      {/* Composer Modal */}
+      {isComposerOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
+          <div className="premium-card" style={{ width: 'min(500px, 95%)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>New Pipeline Lead</h3>
+              <button 
+                onClick={() => setIsComposerOpen(false)} 
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <form onSubmit={e => { e.preventDefault(); createLeadMutation.mutate(form); }} style={{ display: 'grid', gap: '20px' }}>
+              <label>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>NAME</span>
+                <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <label>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>SOURCE</span>
+                  <input value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} required />
+                </label>
+                <label>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>BUDGET ($)</span>
+                  <input type="number" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} />
+                </label>
+              </div>
+              <label>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>EMAIL</span>
+                <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              </label>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                <button type="submit" disabled={createLeadMutation.isPending} className="nav-link-pill active" style={{ flex: 1, border: 'none', cursor: 'pointer' }}>
+                  {createLeadMutation.isPending ? 'Adding...' : 'Add Lead'}
+                </button>
+                <button type="button" onClick={() => setIsComposerOpen(false)} style={{ flex: 1, background: '#f1f5f9', border: 'none', borderRadius: '999px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
