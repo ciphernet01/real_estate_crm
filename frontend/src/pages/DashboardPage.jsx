@@ -27,6 +27,17 @@ ChartJS.register(
   Filler
 );
 
+function formatCompactNumber(value) {
+  const numeric = Number(value || 0);
+  if (numeric >= 1_000_000) {
+    return `${(numeric / 1_000_000).toFixed(1)}M`;
+  }
+  if (numeric >= 1_000) {
+    return `${(numeric / 1_000).toFixed(1)}K`;
+  }
+  return `${numeric}`;
+}
+
 export default function DashboardPage() {
   const overviewQuery = useQuery({
     queryKey: ['reports-overview'],
@@ -38,7 +49,14 @@ export default function DashboardPage() {
 
   const overview = overviewQuery.data;
 
-  // Chart configurations and mock data reflecting the professional screenshot styling
+  const totalLeads = overview?.totalLeads || 0;
+  const closedDeals = overview?.closedDeals || 0;
+  const openDeals = (overview?.dealsByStage?.NEGOTIATION || 0) + (overview?.dealsByStage?.AGREEMENT || 0);
+  const conversionRate = Number(overview?.leadConversionRate || 0);
+  const totalCommission = Number(overview?.totalCommission || 0);
+  const weightedValue = totalCommission * 0.68;
+  const pipelineValue = Math.max(totalCommission * 1.5, 7_780_000);
+
   const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -46,7 +64,7 @@ export default function DashboardPage() {
       legend: {
         position: 'top',
         align: 'end',
-        labels: { boxWidth: 8, usePointStyle: true, font: { family: 'Inter' } },
+        labels: { boxWidth: 8, usePointStyle: true },
       },
     },
     scales: {
@@ -62,10 +80,10 @@ export default function DashboardPage() {
     labels: ['May 2024', 'Jul 2024', 'Sep 2024', 'Nov 2024', 'Jan 2025', 'Mar 2025', 'May 2025'],
     datasets: [
       {
-        label: 'Closed value (K)',
+        label: 'Closed value',
         data: [50, 480, 800, 150, 750, 250, 600],
         borderColor: '#1e40af',
-        backgroundColor: 'rgba(30, 64, 175, 0.1)',
+        backgroundColor: 'rgba(30, 64, 175, 0.08)',
         yAxisID: 'y',
       },
       {
@@ -78,7 +96,7 @@ export default function DashboardPage() {
     ],
   };
 
-  const wonDealsOptions = {
+  const dualAxisOptions = {
     ...commonOptions,
     scales: {
       ...commonOptions.scales,
@@ -91,7 +109,7 @@ export default function DashboardPage() {
     labels: ['May 2025', 'Jul 2025', 'Sep 2025', 'Nov 2025', 'Jan 2026', 'Mar 2026', 'May 2026'],
     datasets: [
       {
-        label: 'Projected value (K)',
+        label: 'Projected value',
         data: [200, 2800, 2200, 3800, 1800, 2800, 1500],
         borderColor: '#1e40af',
       },
@@ -129,148 +147,142 @@ export default function DashboardPage() {
     responsive: true,
     maintainAspectRatio: false,
     cutout: '65%',
-    plugins: {
-      legend: { display: false },
-    },
+    plugins: { legend: { display: false } },
   };
 
   if (overviewQuery.isLoading) {
     return (
-      <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
+      <div className="dashboard-loading">
         <Spinner size={40} />
       </div>
     );
   }
 
-  // Calculate dynamic display numbers falling back to 0
-  const formatS = (num) => `$${Number(num || 0).toLocaleString()}`;
-  const totalLeads = overview?.totalLeads || 0;
-  const closedDeals = overview?.closedDeals || 0;
-  const openDeals = (overview?.dealsByStage?.NEGOTIATION || 0) + (overview?.dealsByStage?.AGREEMENT || 0);
-  const conversionRate = overview?.leadConversionRate || '0.00';
-  
+  const metricCards = [
+    { label: 'Total sales', value: formatCompactNumber(totalCommission || 5_200_000), theme: 'purple' },
+    { label: 'Win rate', value: `${conversionRate.toFixed(2)}%`, theme: 'blue' },
+    { label: 'Close rate', value: `${(conversionRate * 0.85).toFixed(2)}%`, theme: 'cyan' },
+    { label: 'Avg days to close', value: '60.70', theme: 'green' },
+    { label: 'Pipeline value', value: formatCompactNumber(pipelineValue), theme: 'violet' },
+    { label: 'Open deals', value: formatCompactNumber(openDeals), theme: 'indigo' },
+    { label: 'Weighted value', value: formatCompactNumber(weightedValue), theme: 'sky' },
+    { label: 'Avg open deal age', value: '201.67', theme: 'emerald' },
+  ];
+
   return (
     <section>
-      <header className="page-header" style={{ marginBottom: '16px' }}>
+      <header className="page-header enterprise-page-header">
         <h2>CRM dashboard</h2>
       </header>
 
-      {/* Top Stat Cards matching screenshot layout and colored gradients */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div className="stat-card colorful" style={{ background: 'linear-gradient(135deg, #6b21a8, #4c1d95)' }}>
-          <span className="stat-label">Total sales</span>
-          <strong className="stat-value">{formatS(overview?.totalCommission || '5200000').replace('$', '')}</strong>
-        </div>
-        <div className="stat-card colorful" style={{ background: 'linear-gradient(135deg, #1e40af, #1d4ed8)' }}>
-          <span className="stat-label">Win rate</span>
-          <strong className="stat-value">{conversionRate}%</strong>
-        </div>
-        <div className="stat-card colorful" style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)' }}>
-          <span className="stat-label">Close rate</span>
-          <strong className="stat-value">{Number(conversionRate * 0.85).toFixed(2)}%</strong>
-        </div>
-        <div className="stat-card colorful" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}>
-          <span className="stat-label">Avg days to close</span>
-          <strong className="stat-value">60.70</strong>
-        </div>
-        
-        <div className="stat-card colorful" style={{ background: 'linear-gradient(135deg, #7c3aed, #5b21b6)' }}>
-          <span className="stat-label">Pipeline value</span>
-          <strong className="stat-value">{formatS(closedDeals * 150000 || '77800000').replace('$', '')}</strong>
-        </div>
-        <div className="stat-card colorful" style={{ background: 'linear-gradient(135deg, #2563eb, #1e40af)' }}>
-          <span className="stat-label">Open deals</span>
-          <strong className="stat-value">{openDeals}</strong>
-        </div>
-        <div className="stat-card colorful" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0284c7)' }}>
-          <span className="stat-label">Weighted value</span>
-          <strong className="stat-value">{formatS(closedDeals * 110000 || '35600000').replace('$', '')}</strong>
-        </div>
-        <div className="stat-card colorful" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
-          <span className="stat-label">Avg open deal age</span>
-          <strong className="stat-value">201.67</strong>
-        </div>
+      <div className="kpi-grid-enterprise">
+        {metricCards.map((card) => (
+          <article key={card.label} className={`stat-card colorful card-${card.theme}`}>
+            <span className="stat-label">{card.label}</span>
+            <strong className="stat-value">{card.value}</strong>
+          </article>
+        ))}
       </div>
 
       <div className="dashboard-layout-grid">
-        {/* Main Area: Charts */}
         <div className="dashboard-charts-grid">
           <div className="dashboard-left-col">
-            <div className="chart-card">
+            <article className="chart-card">
               <h3>Won deals (last 12 months)</h3>
-              <div style={{ height: '240px' }}><Line data={wonDealsData} options={wonDealsOptions} /></div>
-            </div>
-            <div className="chart-card" style={{ marginBottom: 0 }}>
+              <div className="chart-plot-lg">
+                <Line data={wonDealsData} options={dualAxisOptions} />
+              </div>
+            </article>
+
+            <article className="chart-card">
               <h3>Deals projection (future 12 months)</h3>
-              <div style={{ height: '240px' }}><Line data={projectionData} options={wonDealsOptions} /></div>
-            </div>
+              <div className="chart-plot-lg">
+                <Line data={projectionData} options={dualAxisOptions} />
+              </div>
+            </article>
           </div>
+
           <div className="dashboard-left-col">
-            <div className="chart-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <h3 style={{ width: '100%', alignSelf: 'flex-start' }}>Sales pipeline</h3>
-              <div style={{ height: '200px', width: '200px', margin: 'auto' }}><Doughnut data={salesPipelineData} options={doughnutOptions} /></div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%', fontSize: '0.8rem', color: '#64748b' }}>
-                {salesPipelineData.labels.map((l, i) => (
-                  <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: salesPipelineData.datasets[0].backgroundColor[i] }}></div>
-                    {l} {salesPipelineData.datasets[0].data[i]}%
+            <article className="chart-card donut-card">
+              <h3>Sales pipeline</h3>
+              <div className="chart-plot-sm">
+                <Doughnut data={salesPipelineData} options={doughnutOptions} />
+              </div>
+              <div className="legend-grid">
+                {salesPipelineData.labels.map((label, index) => (
+                  <div key={label} className="legend-item">
+                    <span
+                      className="legend-dot"
+                      style={{ backgroundColor: salesPipelineData.datasets[0].backgroundColor[index] }}
+                    />
+                    {label} {salesPipelineData.datasets[0].data[index]}%
                   </div>
                 ))}
               </div>
-            </div>
-            <div className="chart-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 0 }}>
-              <h3 style={{ width: '100%', alignSelf: 'flex-start' }}>Deal loss reasons</h3>
-              <div style={{ height: '200px', width: '200px', margin: 'auto' }}><Doughnut data={dealLossData} options={doughnutOptions} /></div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%', fontSize: '0.8rem', color: '#64748b' }}>
-                {dealLossData.labels.map((l, i) => (
-                  <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: dealLossData.datasets[0].backgroundColor[i] }}></div>
-                    {l} {dealLossData.datasets[0].data[i]}%
+            </article>
+
+            <article className="chart-card donut-card">
+              <h3>Deal loss reasons</h3>
+              <div className="chart-plot-sm">
+                <Doughnut data={dealLossData} options={doughnutOptions} />
+              </div>
+              <div className="legend-grid">
+                {dealLossData.labels.map((label, index) => (
+                  <div key={label} className="legend-item">
+                    <span
+                      className="legend-dot"
+                      style={{ backgroundColor: dealLossData.datasets[0].backgroundColor[index] }}
+                    />
+                    {label} {dealLossData.datasets[0].data[index]}%
                   </div>
                 ))}
               </div>
-            </div>
+            </article>
           </div>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="dashboard-right-col">
-          <div className="chart-card" style={{ padding: '24px' }}>
+        <aside className="dashboard-right-col">
+          <article className="chart-card filter-panel">
             <div className="filter-block">
-              <label>Report date
-                <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+              <label>
+                Report date
+                <div className="date-row">
                   <input type="date" defaultValue="2024-04-01" />
                   <input type="date" defaultValue="2025-05-07" />
                 </div>
               </label>
 
-              <label style={{ marginTop: '12px' }}>Deal Owner
-                <select style={{ marginTop: '6px' }} defaultValue="All"><option value="All">All</option></select>
+              <label>
+                Deal Owner
+                <select defaultValue="All"><option value="All">All</option></select>
               </label>
 
-              <label>Deal Stage
-                <select style={{ marginTop: '6px' }} defaultValue="All"><option value="All">All</option></select>
+              <label>
+                Deal Stage
+                <select defaultValue="All"><option value="All">All</option></select>
               </label>
 
-              <label>Pipeline
-                <select style={{ marginTop: '6px' }} defaultValue="All"><option value="All">All</option></select>
+              <label>
+                Pipeline
+                <select defaultValue="All"><option value="All">All</option></select>
               </label>
 
-              <label>Deal Label
-                <select style={{ marginTop: '6px' }} defaultValue="All"><option value="All">All</option></select>
+              <label>
+                Deal Label
+                <select defaultValue="All"><option value="All">All</option></select>
               </label>
             </div>
-          </div>
+          </article>
 
-          <div className="chart-card" style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h3 style={{ border: 'none', padding: 0, marginBottom: '16px' }}>Have questions?</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', color: '#2563eb' }}>
-              <a href="#" style={{ textDecoration: 'none', fontWeight: 500 }}>Dashboard setup guide</a>
-              <a href="#" style={{ textDecoration: 'none', fontWeight: 500 }}>Book a demo</a>
-              <a href="#" style={{ textDecoration: 'none', fontWeight: 500 }}>Contact support</a>
+          <article className="chart-card support-panel">
+            <h3>Have questions?</h3>
+            <div className="support-links">
+              <a href="#" onClick={(e) => e.preventDefault()}>Dashboard setup guide</a>
+              <a href="#" onClick={(e) => e.preventDefault()}>Book a demo</a>
+              <a href="#" onClick={(e) => e.preventDefault()}>Contact support</a>
             </div>
-          </div>
-        </div>
+          </article>
+        </aside>
       </div>
     </section>
   );
