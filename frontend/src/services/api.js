@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore.js';
 
 function resolveApiBaseUrl() {
   // Hardcode the production URL to avoid environment variable issues
-  return 'https://real-estate-crm-backend.onrender.com/api';
+  return 'https://real-estate-crm-backend-tcvg.onrender.com/api';
 }
 
 export const api = axios.create({

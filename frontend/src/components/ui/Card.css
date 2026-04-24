@@ -1,0 +1,8 @@
+/* frontend/src/components/ui/Card.css */
+
+.card {
+  background-color: #1a202c;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}

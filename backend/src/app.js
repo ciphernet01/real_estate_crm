@@ -29,19 +29,18 @@ app.set('trust proxy', 1);
 /* ---------- Security & parsing ---------- */
 app.use(helmet());
 
-const configuredOrigins = (process.env.CORS_ORIGIN || '')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const configuredOrigins = [
+  'https://real-estate-crm-frontend-uk7q.onrender.com',
+  ...(process.env.CORS_ORIGIN || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
 
 const corsOptions = {
   credentials: true,
   origin: (origin, callback) => {
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    if (configuredOrigins.includes(origin)) {
+    if (!origin || configuredOrigins.includes(origin)) {
       return callback(null, true);
     }
 
