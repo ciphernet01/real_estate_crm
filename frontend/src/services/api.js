@@ -2,27 +2,8 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore.js';
 
 function resolveApiBaseUrl() {
-  const explicitApiUrl = import.meta.env.VITE_API_URL;
-  if (explicitApiUrl) {
-    return explicitApiUrl;
-  }
-
-  if (typeof window === 'undefined') {
-    return 'http://localhost:4000/api';
-  }
-
-  const { protocol, hostname } = window.location;
-  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
-
-  if (isLocalHost) {
-    return 'http://localhost:4000/api';
-  }
-
-  if (hostname.endsWith('.onrender.com') && hostname.includes('-frontend')) {
-    return `${protocol}//${hostname.replace('-frontend', '-backend')}/api`;
-  }
-
-  return `${protocol}//${hostname}/api`;
+  // Hardcode the production URL to avoid environment variable issues
+  return 'https://real-estate-crm-backend.onrender.com/api';
 }
 
 export const api = axios.create({
