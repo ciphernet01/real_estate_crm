@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../services/api';
-import { Spinner } from './ui';
+import { api } from '../../services/api';
+import { Spinner } from '../ui/Spinner';
 
 export function UpcomingTasks() {
   const tasksQuery = useQuery({

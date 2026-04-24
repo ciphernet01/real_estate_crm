@@ -1,41 +1,35 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
-import { DashboardLayout } from './components/layout/DashboardLayout.jsx';
-import LoginPage from './pages/LoginPage.jsx';
-import DashboardPage from './pages/DashboardPage.jsx';
-import LeadsPage from './pages/LeadsPage.jsx';
-import PropertiesPage from './pages/PropertiesPage.jsx';
-import ClientsPage from './pages/ClientsPage.jsx';
-import DealsPage from './pages/DealsPage.jsx';
-import ReportsPage from './pages/ReportsPage.jsx';
-import SettingsPage from './pages/SettingsPage.jsx';
-import { useAuthStore } from './store/authStore.js';
-
-function ProtectedLayout() {
-  const token = useAuthStore((state) => state.token);
-
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <DashboardLayout />;
-}
+import { Toaster } from 'react-hot-toast';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from './contexts/auth.jsx';
+import { DashboardLayout, PublicLayout } from './layouts';
+import DashboardPage from './pages/DashboardPage';
+import { LoginPage, RegisterPage } from './pages/auth';
+import ClientsPage from './pages/ClientsPage';
+import DealsPage from './pages/DealsPage';
+import LeadsPage from './pages/LeadsPage';
+import ReportsPage from './pages/ReportsPage';
+import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
-  const token = useAuthStore((state) => state.token);
-
   return (
-    <Routes>
-      <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route element={<ProtectedLayout />}>
-        <Route index element={<DashboardPage />} />
-        <Route path="leads" element={<LeadsPage />} />
-        <Route path="properties" element={<PropertiesPage />} />
-        <Route path="clients" element={<ClientsPage />} />
-        <Route path="deals" element={<DealsPage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <AuthProvider>
+      <Toaster position="top-right" toastOptions={{ className: 'enterprise-toast' }} />
+      <BrowserRouter>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
+          <Route element={<DashboardLayout />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/agents" element={<ClientsPage />} />
+            <Route path="/leads" element={<LeadsPage />} />
+            <Route path="/deals" element={<DealsPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Chart } from 'chart.js';
 import { useEffect, useRef } from 'react';
-import { api } from '../services/api';
-import { Spinner } from './ui';
+import { api } from '../../services/api';
+import { Spinner } from '../ui/Spinner';
 
 export function SalesChart() {
   const chartRef = useRef(null);
