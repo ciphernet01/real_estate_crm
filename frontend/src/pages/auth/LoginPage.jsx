@@ -28,7 +28,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit(login)} className="enterprise-auth-form">
           <Input type="email" label="Email" {...register('email', { required: true })} />
           <Input type="password" label="Password" {...register('password', { required: true })} />
-          <Button type="submit" className="w-full">Login</Button>
+          <Button type="submit" variant="primary" className="w-full">Login</Button>
         </form>
 
         <div className="enterprise-auth-divider">
