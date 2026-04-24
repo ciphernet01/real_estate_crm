@@ -92,6 +92,23 @@ app.use('/api', apiLimiter);
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 /* ---------- Health ---------- */
+app.get('/', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'real-estate-crm-api',
+    message: 'API is running. Use /api/* endpoints.',
+    docs: ['/api/health', '/api/health/deep', '/api/auth/login'],
+  });
+});
+
+app.get('/api', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'real-estate-crm-api',
+    message: 'API base path is active',
+  });
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'real-estate-crm-api' });
 });
